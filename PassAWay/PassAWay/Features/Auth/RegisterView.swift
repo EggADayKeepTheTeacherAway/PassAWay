@@ -108,7 +108,7 @@ struct RegisterView: View {
                     
                     // Submit Button & Footer
                     VStack(spacing: 15) {
-                        NavigationLink(destination: Text("Onboard Location View Goes Here")) {
+                        NavigationLink(destination: OnboardLocationView()) {
                             Text("Create Account")
                                 .font(.headline)
                                 .foregroundColor(.white)
