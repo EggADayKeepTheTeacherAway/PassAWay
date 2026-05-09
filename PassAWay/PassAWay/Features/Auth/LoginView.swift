@@ -6,13 +6,21 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct LoginView: View {
-    @State private var username: String = ""
-    @State private var password: String = ""
-    
     @Environment(\.dismiss) var dismiss
     
+    // MARK: - Input State
+    @State private var email: String = ""
+    @State private var password: String = ""
+    
+    // MARK: - Authentication State
+    @State private var isLoading = false
+    @State private var errorMessage: String = ""
+    @State private var navigateToMainFeed = false
+    
+    // MARK: - Body
     var body: some View {
         ZStack {
             Color("PassBackground")
@@ -21,7 +29,7 @@ struct LoginView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     
-                    // Header
+                    // Header Navigation
                     Button(action: {
                         dismiss()
                     }) {
@@ -35,7 +43,6 @@ struct LoginView: View {
                     .buttonStyle(.plain)
                     .padding(.top, 10)
                     
-                    // Updated Header Text
                     Text("Welcome Back")
                         .font(.title)
                         .fontWeight(.heavy)
@@ -45,18 +52,21 @@ struct LoginView: View {
                     // Input Fields
                     VStack(alignment: .leading, spacing: 18) {
                         
-                        // Username Field
+                        // Email Field
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Username")
+                            Text("Email")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(Color("PassPrimary"))
                             
-                            TextField("Enter your username....", text: $username)
+                            TextField("Enter your email....", text: $email)
                                 .padding(.horizontal)
                                 .frame(height: 44)
                                 .background(Color("PassLightGreen"))
                                 .cornerRadius(10)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
                         }
                         
                         // Password Field
@@ -76,16 +86,36 @@ struct LoginView: View {
                     
                     // Submit Button & Footer
                     VStack(spacing: 15) {
-                        NavigationLink(destination: Text("Main App View Goes Here")) {
-                            Text("Sign In")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(Color("PassPrimary"))
-                                .cornerRadius(10)
+                        
+                        // Error Display
+                        if !errorMessage.isEmpty {
+                            Text(errorMessage)
+                                .font(.footnote)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
                         }
-                        .padding(.top, 25)
+                        
+                        // Firebase Login Button
+                        Button(action: {
+                            loginUser()
+                        }) {
+                            ZStack {
+                                if isLoading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Text("Sign In")
+                                        .font(.headline)
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color("PassPrimary"))
+                            .cornerRadius(10)
+                        }
+                        .padding(.top, 15)
+                        .disabled(isLoading) // Prevent double-clicking
                         
                         // Register Link
                         HStack(spacing: 5) {
@@ -108,9 +138,40 @@ struct LoginView: View {
             }
         }
         .navigationBarHidden(true)
+        .navigationDestination(isPresented: $navigateToMainFeed) {
+            Text("MAIN FEED!")
+                .navigationBarBackButtonHidden(true)
+        }
+    }
+    
+    // MARK: - Authentication Methods
+    
+    private func loginUser() {
+        // Basic validation
+        guard !email.isEmpty, !password.isEmpty else {
+            errorMessage = "Please enter both email and password."
+            return
+        }
+        
+        isLoading = true
+        errorMessage = ""
+        
+        // Call Firebase to sign the user in
+        Auth.auth().signIn(withEmail: email, password: password) { result, error in
+            isLoading = false
+            
+            if let error = error {
+                errorMessage = error.localizedDescription
+                return
+            }
+            
+            // Success! Trigger the navigation to the main feed
+            navigateToMainFeed = true
+        }
     }
 }
 
+// MARK: - Preview
 #Preview {
     LoginView()
 }

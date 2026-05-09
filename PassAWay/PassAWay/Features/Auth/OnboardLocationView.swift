@@ -1,5 +1,5 @@
 //
-//  OnboardLocationScreen.swift
+//  OnboardLocationView.swift
 //  PassAWay
 //
 //  Created by Nunthapop on 9/5/2569 BE.
@@ -7,11 +7,20 @@
 
 import SwiftUI
 import MapKit
+import FirebaseAuth
+import FirebaseFirestore
 
 struct OnboardLocationView: View {
     @Environment(\.dismiss) var dismiss
     
-    // Default location: Kasetsart University Bangkhen
+    // MARK: - Properties passed from RegisterView
+    var name: String
+    var email: String
+    var username: String
+    var password: String
+    
+    // MARK: - Map State
+    // Default location initialized to Kasetsart University Bangkhen
     @State private var position: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 13.8473, longitude: 100.5696),
@@ -21,6 +30,14 @@ struct OnboardLocationView: View {
     
     @State private var selectedAddress: String = "Finding location..."
     
+    @State private var currentCoordinate = CLLocationCoordinate2D(latitude: 13.8473, longitude: 100.5696)
+    
+    // MARK: - Authentication State
+    @State private var isLoading = false
+    @State private var errorMessage: String = ""
+    @State private var navigateToMainFeed = false
+    
+    // MARK: - Body
     var body: some View {
         ZStack {
             Color("PassBackground")
@@ -28,7 +45,7 @@ struct OnboardLocationView: View {
             
             VStack(alignment: .leading, spacing: 0) {
                 
-                // Header
+                // Header Navigation
                 VStack(alignment: .leading, spacing: 8) {
                     Button(action: {
                         dismiss()
@@ -55,7 +72,7 @@ struct OnboardLocationView: View {
                 .padding(.horizontal, 25)
                 .padding(.bottom, 20)
                 
-                // Selected Location Field
+                // Address Search Field
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(Color("PassPrimary"))
@@ -75,19 +92,20 @@ struct OnboardLocationView: View {
                 .padding(.horizontal, 25)
                 .padding(.bottom, 15)
                 
-                // Interactive Map Area
+                // Interactive Map Component
                 ZStack {
                     Map(position: $position)
                         .onMapCameraChange(frequency: .onEnd) { context in
+                            currentCoordinate = context.region.center
                             fetchAddressFromCoordinates(coordinate: context.region.center)
                         }
                     
-                    // Current Location Button
+                    // Current Location Request Button
                     VStack {
                         HStack {
                             Spacer()
                             Button(action: {
-                                // TODO: Implement GPS location snap
+                                // TODO: Implement CoreLocation manager logic
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "location.fill")
@@ -107,7 +125,7 @@ struct OnboardLocationView: View {
                         Spacer()
                     }
                     
-                    // Center Pin
+                    // Center Target Pin
                     VStack(spacing: 0) {
                         Image(systemName: "mappin")
                             .resizable()
@@ -124,22 +142,42 @@ struct OnboardLocationView: View {
                 }
                 .clipShape(Rectangle())
                 
-                // Guiding Text & Confirm Button
+                // Confirmation Footer
                 VStack(spacing: 15) {
+                    
+                    // Error Display
+                    if !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+                    
                     Text("Move the pin or search for the location")
                         .font(.footnote)
                         .foregroundColor(.gray)
                         .padding(.top, 10)
                     
-                    NavigationLink(destination: Text("Main Feed Goes Here")) {
-                        Text("Confirm Location")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(Color("PassPrimary"))
-                            .cornerRadius(10)
+                    // Final Submission Button
+                    Button(action: {
+                        createFirebaseAccount(coordinate: currentCoordinate)
+                    }) {
+                        ZStack {
+                            if isLoading {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Text("Confirm Location")
+                                    .font(.headline)
+                            }
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color("PassPrimary"))
+                        .cornerRadius(10)
                     }
+                    .disabled(isLoading)
                 }
                 .padding(.horizontal, 25)
                 .padding(.bottom, 20)
@@ -150,10 +188,15 @@ struct OnboardLocationView: View {
         .onAppear {
             fetchAddressFromCoordinates(coordinate: CLLocationCoordinate2D(latitude: 13.8473, longitude: 100.5696))
         }
+        .navigationDestination(isPresented: $navigateToMainFeed) {
+            Text("MAIN FEED!")
+                .navigationBarBackButtonHidden(true)
+        }
     }
     
-    // MARK: - Helper Functions
+    // MARK: - Location Services
     
+    /// Converts latitude and longitude into a readable street or city address
     private func fetchAddressFromCoordinates(coordinate: CLLocationCoordinate2D) {
         Task {
             let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
@@ -189,8 +232,72 @@ struct OnboardLocationView: View {
             }
         }
     }
+    
+    // MARK: - Authentication & Database
+    
+    /// Creates the Firebase Auth credential and saves the public User object to Firestore
+    private func createFirebaseAccount(coordinate: CLLocationCoordinate2D) {
+        isLoading = true
+        errorMessage = ""
+        
+        // 1. Initialize Firebase Auth user
+        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+            if let error = error {
+                errorMessage = error.localizedDescription
+                isLoading = false
+                return
+            }
+            
+            guard let uid = authResult?.user.uid else { return }
+            
+            // 2. Construct the Firestore User document
+            let userLocation = LocationData(
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
+                address_string: selectedAddress
+            )
+            
+            let newUser = User(
+                id: uid,
+                user_id: uid,
+                username: username,
+                email: email,
+                name: name,
+                profileImageUrl: "",
+                bio: "New to PassAWay!",
+                location: userLocation,
+                level: 1,
+                itemsListed: 0,
+                itemsGivenAway: 0
+            )
+            
+            // 3. Write data to the users collection
+            let db = Firestore.firestore()
+            do {
+                try db.collection("users").document(uid).setData(from: newUser) { error in
+                    if let error = error {
+                        errorMessage = error.localizedDescription
+                        isLoading = false
+                        return
+                    }
+                    
+                    isLoading = false
+                    navigateToMainFeed = true
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+                isLoading = false
+            }
+        }
+    }
 }
 
+// MARK: - Preview
 #Preview {
-    OnboardLocationView()
+    OnboardLocationView(
+        name: "Test User",
+        email: "test@kasetsart.ac.th",
+        username: "tester123",
+        password: "password123"
+    )
 }

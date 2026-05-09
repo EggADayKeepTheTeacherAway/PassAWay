@@ -8,12 +8,15 @@
 import SwiftUI
 
 struct RegisterView: View {
+    // MARK: - Input State
     @State private var name: String = ""
+    @State private var email: String = ""
     @State private var username: String = ""
     @State private var password: String = ""
     
     @Environment(\.dismiss) var dismiss
     
+    // MARK: - Body
     var body: some View {
         ZStack {
             Color("PassBackground")
@@ -22,7 +25,7 @@ struct RegisterView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     
-                    // Header
+                    // Header Navigation
                     Button(action: {
                         dismiss()
                     }) {
@@ -60,7 +63,7 @@ struct RegisterView: View {
                     }
                     .padding(.vertical, 5)
                     
-                    // Input Fields
+                    // MARK: - Input Fields
                     VStack(alignment: .leading, spacing: 18) {
                         
                         // Name Field
@@ -75,6 +78,37 @@ struct RegisterView: View {
                                 .frame(height: 44)
                                 .background(Color("PassLightGreen"))
                                 .cornerRadius(10)
+                            
+                            // Inline Validation Warning
+                            if !name.isEmpty && !isNameValid {
+                                Text("Name cannot contain numbers.")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        
+                        // Email Field
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Email")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color("PassPrimary"))
+                            
+                            TextField("Enter your email....", text: $email)
+                                .padding(.horizontal)
+                                .frame(height: 44)
+                                .background(Color("PassLightGreen"))
+                                .cornerRadius(10)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            
+                            // Inline Validation Warning
+                            if !email.isEmpty && !isEmailValid {
+                                Text("Please enter a valid email address.")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
                         }
                         
                         // Username Field
@@ -89,6 +123,15 @@ struct RegisterView: View {
                                 .frame(height: 44)
                                 .background(Color("PassLightGreen"))
                                 .cornerRadius(10)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            
+                            // Inline Validation Warning
+                            if !username.isEmpty && !isUsernameValid {
+                                Text("Username must be at least 3 characters and have no spaces.")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
                         }
                         
                         // Password Field
@@ -103,13 +146,25 @@ struct RegisterView: View {
                                 .frame(height: 44)
                                 .background(Color("PassLightGreen"))
                                 .cornerRadius(10)
+                            
+                            // Inline Validation Warning
+                            if !password.isEmpty && !isPasswordValid {
+                                Text("Password must be at least 6 characters.")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
                         }
                     }
                     
-                    // Submit Button & Footer
+                    // MARK: - Submit Button & Footer
                     VStack(spacing: 15) {
-                        NavigationLink(destination: OnboardLocationView()) {
-                            Text("Create Account")
+                        NavigationLink(destination: OnboardLocationView(
+                            name: name,
+                            email: email,
+                            username: username,
+                            password: password
+                        )) {
+                            Text("Continue to Location")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -118,6 +173,8 @@ struct RegisterView: View {
                                 .cornerRadius(10)
                         }
                         .padding(.top, 25)
+                        .disabled(!isFormValid) // Disables the button if form is invalid
+                        .opacity(isFormValid ? 1.0 : 0.5) // Fades the button to look disabled
                         
                         // Sign In Link
                         HStack(spacing: 5) {
@@ -137,19 +194,49 @@ struct RegisterView: View {
                     }
                 }
                 .padding(.horizontal, 25)
+                .padding(.bottom, 30) // Extra padding for scrolling
             }
         }
         .navigationBarHidden(true)
     }
+    
+    // MARK: - Form Validation Logic
+    
+    private var isNameValid: Bool {
+        // Name must not be empty AND must not contain any decimal digits
+        !name.isEmpty && name.rangeOfCharacter(from: .decimalDigits) == nil
+    }
+    
+    private var isEmailValid: Bool {
+        // Basic Regex pattern to ensure it looks like an email (something@something.com)
+        let emailRegex = "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}$"
+        let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegex)
+        return emailPredicate.evaluate(with: email)
+    }
+    
+    private var isUsernameValid: Bool {
+        // Must be at least 3 characters and contain no spaces
+        username.count >= 3 && !username.contains(" ")
+    }
+    
+    private var isPasswordValid: Bool {
+        // Firebase Auth requires a minimum of 6 characters for passwords
+        password.count >= 6
+    }
+    
+    private var isFormValid: Bool {
+        // The final check: ALL fields must be valid for this to return true
+        isNameValid && isEmailValid && isUsernameValid && isPasswordValid
+    }
 }
 
+// MARK: - Gesture Extension
 extension UINavigationController {
     open override func viewDidLoad() {
         super.viewDidLoad()
         interactivePopGestureRecognizer?.delegate = nil
     }
 }
-
 
 #Preview {
     RegisterView()
