@@ -11,7 +11,7 @@ import SwiftUI
 struct PassAWayApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            BootUpView()
         }
     }
 }
