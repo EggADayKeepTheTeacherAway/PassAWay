@@ -45,7 +45,7 @@ struct BootUpView: View {
                     // Bottom Buttons
                     VStack(spacing: 20) {
                         // Register Navigation
-                        NavigationLink(destination: Text("Register View Goes Here")) {
+                        NavigationLink(destination: RegisterView()) {
                             Text("Get Start !")
                                 .font(.headline)
                                 .foregroundColor(.white)
