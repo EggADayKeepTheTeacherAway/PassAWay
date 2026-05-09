@@ -23,16 +23,7 @@ struct RegisterView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     
                     // Header
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        HStack(spacing: 5) {
-                            Image(systemName: "arrow.left")
-                            Text("Back")
-                                .fontWeight(.bold)
-                        }
-                        .foregroundColor(Color("PassPrimary"))
-                    }
+                    BackButton()
                     .buttonStyle(.plain)
                     .padding(.top, 10)
                     

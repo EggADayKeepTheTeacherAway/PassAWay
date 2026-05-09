@@ -30,16 +30,7 @@ struct OnboardLocationView: View {
                 
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        HStack(spacing: 5) {
-                            Image(systemName: "arrow.left")
-                            Text("Back")
-                                .fontWeight(.bold)
-                        }
-                        .foregroundColor(Color("PassPrimary"))
-                    }
+                    BackButton()
                     .buttonStyle(.plain)
                     .padding(.top, 10)
                     
