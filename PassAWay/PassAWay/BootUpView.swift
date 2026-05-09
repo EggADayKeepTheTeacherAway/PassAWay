@@ -62,7 +62,7 @@ struct BootUpView: View {
                                 .font(.footnote)
                                 .foregroundColor(.gray)
                             
-                            NavigationLink(destination: Text("Login View Goes Here")) {
+                            NavigationLink(destination: LoginView()) {
                                 Text("Sign In")
                                     .font(.footnote)
                                     .fontWeight(.bold)

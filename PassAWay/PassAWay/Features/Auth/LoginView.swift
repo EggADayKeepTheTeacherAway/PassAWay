@@ -1,5 +1,5 @@
 //
-//  RegisterView.swift
+//  LoginView.swift
 //  PassAWay
 //
 //  Created by Nunthapop on 9/5/2569 BE.
@@ -7,8 +7,7 @@
 
 import SwiftUI
 
-struct RegisterView: View {
-    @State private var name: String = ""
+struct LoginView: View {
     @State private var username: String = ""
     @State private var password: String = ""
     
@@ -36,46 +35,15 @@ struct RegisterView: View {
                     .buttonStyle(.plain)
                     .padding(.top, 10)
                     
-                    // Header Text
-                    Text("Create New Account")
+                    // Updated Header Text
+                    Text("Welcome Back")
                         .font(.title)
                         .fontWeight(.heavy)
                         .foregroundColor(Color("PassPrimary"))
-                    
-                    // Avatar Picker
-                    HStack {
-                        Spacer()
-                        ZStack {
-                            Circle()
-                                .fill(Color("PassLightGreen"))
-                                .frame(width: 100, height: 100)
-                            
-                            Image(systemName: "photo.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 35, height: 35)
-                                .foregroundColor(Color("PassPrimary"))
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 5)
+                        .padding(.bottom, 10)
                     
                     // Input Fields
                     VStack(alignment: .leading, spacing: 18) {
-                        
-                        // Name Field
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Name")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color("PassPrimary"))
-                            
-                            TextField("Enter your name....", text: $name)
-                                .padding(.horizontal)
-                                .frame(height: 44)
-                                .background(Color("PassLightGreen"))
-                                .cornerRadius(10)
-                        }
                         
                         // Username Field
                         VStack(alignment: .leading, spacing: 6) {
@@ -108,8 +76,8 @@ struct RegisterView: View {
                     
                     // Submit Button & Footer
                     VStack(spacing: 15) {
-                        NavigationLink(destination: Text("Onboard Location View Goes Here")) {
-                            Text("Create Account")
+                        NavigationLink(destination: Text("Main App View Goes Here")) {
+                            Text("Sign In")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -119,15 +87,15 @@ struct RegisterView: View {
                         }
                         .padding(.top, 25)
                         
-                        // Sign In Link
+                        // Register Link
                         HStack(spacing: 5) {
-                            Text("Already have an account?")
+                            Text("Don't have an account?")
                                 .font(.footnote)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.gray)
                             
-                            NavigationLink(destination: LoginView()) {
-                                Text("Sign In")
+                            NavigationLink(destination: RegisterView()) {
+                                Text("Sign Up")
                                     .font(.footnote)
                                     .fontWeight(.bold)
                                     .foregroundColor(Color("PassPrimary"))
@@ -143,14 +111,6 @@ struct RegisterView: View {
     }
 }
 
-extension UINavigationController {
-    open override func viewDidLoad() {
-        super.viewDidLoad()
-        interactivePopGestureRecognizer?.delegate = nil
-    }
-}
-
-
 #Preview {
-    RegisterView()
+    LoginView()
 }
