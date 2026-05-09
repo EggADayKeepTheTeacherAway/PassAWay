@@ -25,17 +25,8 @@ struct RegisterView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     
-                    // Header Navigation
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        HStack(spacing: 5) {
-                            Image(systemName: "arrow.left")
-                            Text("Back")
-                                .fontWeight(.bold)
-                        }
-                        .foregroundColor(Color("PassPrimary"))
-                    }
+                    // Header
+                    BackButton()
                     .buttonStyle(.plain)
                     .padding(.top, 10)
                     
