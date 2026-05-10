@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct BootUpView: View {
+    @AppStorage("wantsDirectLogin") private var wantsDirectLogin = false
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -72,6 +74,10 @@ struct BootUpView: View {
                         }
                     }
                     .padding(.bottom, 40)
+                }
+                .navigationDestination(isPresented: $wantsDirectLogin) {
+                    LoginView()
+                        .navigationBarBackButtonHidden(true)
                 }
             }
         }

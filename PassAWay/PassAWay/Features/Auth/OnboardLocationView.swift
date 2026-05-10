@@ -35,7 +35,6 @@ struct OnboardLocationView: View {
     // MARK: - Authentication State
     @State private var isLoading = false
     @State private var errorMessage: String = ""
-    @State private var navigateToMainFeed = false
     
     // MARK: - Body
     var body: some View {
@@ -179,10 +178,6 @@ struct OnboardLocationView: View {
         .onAppear {
             fetchAddressFromCoordinates(coordinate: CLLocationCoordinate2D(latitude: 13.8473, longitude: 100.5696))
         }
-        .navigationDestination(isPresented: $navigateToMainFeed) {
-            Text("MAIN FEED!")
-                .navigationBarBackButtonHidden(true)
-        }
     }
     
     // MARK: - Location Services
@@ -271,9 +266,6 @@ struct OnboardLocationView: View {
                         isLoading = false
                         return
                     }
-                    
-                    isLoading = false
-                    navigateToMainFeed = true
                 }
             } catch {
                 errorMessage = error.localizedDescription

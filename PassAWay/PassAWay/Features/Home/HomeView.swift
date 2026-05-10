@@ -8,7 +8,7 @@
 import SwiftUI
 import FirebaseFirestore
 import Combine
-
+import FirebaseAuth
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
@@ -27,9 +27,10 @@ struct HomeView: View {
                         // MARK: Header
                         HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Hi, Rattanan")
+                                Text("Hi, \(viewModel.currentUser?.name ?? "there")")
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundColor(Color("PassPrimary"))
+                                    .lineLimit(1)
                             }
                             Spacer()
                             NotificationBell()
@@ -42,7 +43,6 @@ struct HomeView: View {
                         
                         // MARK: Recently Added
                         HStack {
-
                             Text("Recently Added")
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundColor(Color("PassPrimary"))
@@ -119,15 +119,14 @@ struct HomeView: View {
                     }
                 }.refreshable {
                     viewModel.listenToItems()
+                    viewModel.fetchCurrentUser() // ADDED to refreshable
                 }
-
-                // MARK: Tab Bar
-                TabBarView()
             }
         }
         .navigationBarHidden(true)
         .onAppear {
             viewModel.listenToItems()
+            viewModel.fetchCurrentUser() 
         }
     }
 }
@@ -139,7 +138,6 @@ struct HomeView_Previews: PreviewProvider {
     }
 }
 
-
 // MARK: - ViewModel
 
 @MainActor
@@ -147,8 +145,25 @@ private final class HomeViewModel: ObservableObject {
     @Published var items: [Item] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    
+    @Published var currentUser: User?
 
     private let db = Firestore.firestore()
+    
+    func fetchCurrentUser() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        Task {
+            do {
+                let document = try await db.collection("users").document(uid).getDocument()
+                if document.exists {
+                    self.currentUser = try document.data(as: User.self)
+                }
+            } catch {
+                print("Error fetching user: \(error.localizedDescription)")
+            }
+        }
+    }
 
     func listenToItems() {
         isLoading = true
@@ -176,4 +191,3 @@ private final class HomeViewModel: ObservableObject {
             }
     }
 }
-

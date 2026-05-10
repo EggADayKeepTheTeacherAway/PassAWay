@@ -120,12 +120,6 @@ struct BrowseView: View {
                         .padding(.bottom, 100)
                     }
                 }
-                
-                // Bottom Tab Bar
-                VStack {
-                    Spacer()
-                    TabBarView()
-                }
             }
             .toolbar(.hidden, for: .navigationBar)
         }
