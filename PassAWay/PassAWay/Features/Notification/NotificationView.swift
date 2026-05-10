@@ -124,9 +124,6 @@ struct NotificationView: View {
                         .padding(.bottom, 30)
                     }
                 }
-                
-                // MARK: - Bottom Tab Bar
-                TabBarView()
             }
         }
         .navigationBarHidden(true)

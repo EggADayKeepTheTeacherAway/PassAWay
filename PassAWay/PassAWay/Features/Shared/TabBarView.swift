@@ -6,9 +6,8 @@
 //
 import SwiftUI
 
-
 struct TabBarView: View {
-    @State private var selected = 0
+    @Binding var selected: Int
 
     var tabs: [(icon: String, label: String)] = [
         ("house.fill", "Home"),
@@ -23,8 +22,9 @@ struct TabBarView: View {
                 Spacer()
 
                 if i == 2 {
-                    // FAB-style center Add button
-                    Button(action: {}) {
+                    Button(action: {
+                        // TODO: Action for Add Button
+                    }) {
                         Image(systemName: "plus")
                             .font(.system(size: 22, weight: .bold))
                             .foregroundColor(.white)
@@ -37,6 +37,7 @@ struct TabBarView: View {
                     Spacer()
                 }
 
+                // Update the selected tab binding when tapped
                 Button(action: { selected = i }) {
                     VStack(spacing: 4) {
                         Image(systemName: tabs[i].icon)
