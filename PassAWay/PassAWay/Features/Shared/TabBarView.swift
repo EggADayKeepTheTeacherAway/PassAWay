@@ -4,11 +4,11 @@
 //
 //  Created by SHARK 🦈 on 10/5/26.
 //
+
 import SwiftUI
 
-
 struct TabBarView: View {
-    @State private var selected = 0
+    @Binding var selectedTab: Int
 
     var tabs: [(icon: String, label: String)] = [
         ("house.fill", "Home"),
@@ -23,7 +23,7 @@ struct TabBarView: View {
                 Spacer()
 
                 if i == 2 {
-                    // FAB-style center Add button
+                    // FAB center Add button
                     Button(action: {}) {
                         Image(systemName: "plus")
                             .font(.system(size: 22, weight: .bold))
@@ -37,14 +37,14 @@ struct TabBarView: View {
                     Spacer()
                 }
 
-                Button(action: { selected = i }) {
+                Button(action: { selectedTab = i }) {
                     VStack(spacing: 4) {
                         Image(systemName: tabs[i].icon)
                             .font(.system(size: 18))
-                            .foregroundColor(selected == i ? Color("PassPrimary") : Color("PassPrimary").opacity(0.35))
+                            .foregroundColor(selectedTab == i ? Color("PassPrimary") : Color("PassPrimary").opacity(0.35))
                         Text(tabs[i].label)
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(selected == i ? Color("PassPrimary") : Color("PassPrimary").opacity(0.35))
+                            .foregroundColor(selectedTab == i ? Color("PassPrimary") : Color("PassPrimary").opacity(0.35))
                     }
                 }
                 Spacer()
