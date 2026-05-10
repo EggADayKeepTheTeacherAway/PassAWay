@@ -5,17 +5,20 @@
 //  Created by SHARK 🦈 on 10/5/26.
 //
 
-import SwiftUI
+import Foundation
+import FirebaseFirestore
 
 
-struct Item: Identifiable {
-    let id = UUID()
-    let title: String
-    let description: String
-    let category: String
-    let condition: String
-    let pickupArea: String
-    let imageName: String? // system symbol or nil for placeholder
-    let postedBy: String
-    let timeAgo: String
+struct Item: Identifiable, Codable {
+    @DocumentID var id: String?
+    var giverId: String
+    var photoUrl: String
+    var title: String
+    var description: String
+    var category: String
+    var condition: String
+    var pickUpArea: String
+    var status: String
+    var claimedBy: String?
+    var createdAt: Timestamp
 }
