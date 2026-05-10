@@ -13,6 +13,7 @@ import Combine
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @State private var showSearch = false
+    @State private var centeredItemId: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -26,7 +27,7 @@ struct HomeView: View {
                         // MARK: Header
                         HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Hi, Rattanan 👋")
+                                Text("Hi, Rattanan")
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundColor(Color("PassPrimary"))
                             }
@@ -37,28 +38,13 @@ struct HomeView: View {
                         .padding(.top, 16)
                         .padding(.bottom, 12)
 
-                        // MARK: Search Bar
-                        HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(Color("PassPrimary").opacity(0.5))
-                                .font(.system(size: 15))
-                            Text("Search for an item...")
-                                .font(.system(size: 14))
-                                .foregroundColor(Color("PassPrimary").opacity(0.45))
-                            Spacer()
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 11)
-                        .background(Color("SearchBg"))
-                        .cornerRadius(12)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-                        .onTapGesture { showSearch = true }
-
+                        Spacer().frame(height: 20)
+                        
                         // MARK: Recently Added
                         HStack {
+
                             Text("Recently Added")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 20, weight: .semibold))
                                 .foregroundColor(Color("PassPrimary"))
                             Spacer()
                             Button("See all") {
@@ -93,21 +79,40 @@ struct HomeView: View {
                                 .padding(.top, 60)
 
                         } else {
-                            LazyVGrid(
-                                columns: [
-                                    GridItem(.flexible(), spacing: 12),
-                                    GridItem(.flexible(), spacing: 12)
-                                ],
-                                spacing: 14
-                            ) {
-                                ForEach(viewModel.items) { item in
-                                    NavigationLink(destination: PostDetailView(item: item)) {
-                                        ItemCard(item: item)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 14) {
+                                    ForEach(viewModel.items) { item in
+                                        GeometryReader { geo in
+                                            HomeItemCard(item: item)
+                                                .onChange(of: geo.frame(in: .global).midX) { midX in
+                                                    let screenMid = UIScreen.main.bounds.width / 2
+                                                    if abs(midX - screenMid) < 80 {
+                                                        centeredItemId = item.id
+                                                    }
+                                                }
+                                        }
+                                        .frame(width: 260, height: 320)
                                     }
-                                    .buttonStyle(.plain)
                                 }
+                                .padding(.horizontal, 20)
                             }
-                            .padding(.horizontal, 20)
+
+                            // Text below scroll
+                            if let centered = viewModel.items.first(where: { $0.id == centeredItemId }) ?? viewModel.items.first {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(centered.title)
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(Color("PassPrimary"))
+
+                                    Text(centered.description)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(Color("PassPrimary").opacity(0.6))
+                                        .lineLimit(2)
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 12)
+                                .animation(.easeInOut, value: centeredItemId)
+                            }
                         }
 
                         Spacer().frame(height: 100)
