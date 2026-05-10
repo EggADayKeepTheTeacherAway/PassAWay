@@ -5,8 +5,8 @@
 //  Created by SHARK 🦈 on 10/5/26.
 //
 
-
 import SwiftUI
+import FirebaseCore
 
 struct PostDetailView: View {
     let item: Item
@@ -22,27 +22,29 @@ struct PostDetailView: View {
 
                     // MARK: Hero Image
                     ZStack(alignment: .topLeading) {
-                        RoundedRectangle(cornerRadius: 0)
-                            .fill(Color("PassLightGreen"))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 300)
+                        AsyncImage(url: URL(string: item.photoUrl)) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            Color("PassLightGreen")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 300)
+                        .clipped()
 
-                        // Back button
                         BackButton()
-                        .padding(.top, 52)
-                        .padding(.leading, 20)
+                            .padding(.top, 52)
+                            .padding(.leading, 20)
                     }
 
                     // MARK: Content Card
                     VStack(alignment: .leading, spacing: 0) {
 
-                        // Title + poster row
+                        // Title + avatar row
                         HStack(alignment: .top) {
                             Text(item.title)
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(Color("PassPrimary"))
                             Spacer()
-                            // Poster avatar
                             Circle()
                                 .fill(Color("PassPrimary"))
                                 .frame(width: 38, height: 38)
@@ -54,13 +56,7 @@ struct PostDetailView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 22)
-                        .padding(.bottom, 6)
-
-                        Text(item.postedBy)
-                            .font(.system(size: 12))
-                            .foregroundColor(Color("PassPrimary").opacity(0.5))
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 16)
+                        .padding(.bottom, 16)
 
                         Divider()
                             .background(Color("PassPrimary").opacity(0.1))
@@ -75,22 +71,22 @@ struct PostDetailView: View {
                             .padding(.horizontal, 20)
                             .padding(.bottom, 24)
 
-                        // MARK: Meta chips
+                        // MARK: Meta rows
                         VStack(spacing: 12) {
                             MetaRow(label: "Category", value: item.category)
                             MetaRow(label: "Condition", value: item.condition)
-                            MetaRow(label: "Pickup Area", value: item.pickupArea)
-                            MetaRow(label: "Posted", value: item.timeAgo)
+                            MetaRow(label: "Pickup Area", value: item.pickUpArea)
+                            MetaRow(label: "Status", value: item.status.capitalized)
                         }
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 120) // space for bottom button
+                        .padding(.bottom, 120)
                     }
                     .background(Color("PassBackground"))
                 }
             }
             .ignoresSafeArea(edges: .top)
 
-            // MARK: Request Button (placeholder, no action yet)
+            // MARK: Request Button
             VStack(spacing: 0) {
                 Divider().background(Color("PassPrimary").opacity(0.08))
                 Button(action: {
@@ -144,14 +140,16 @@ struct MetaRow: View {
 struct PostDetailView_Previews: PreviewProvider {
     static var previews: some View {
         PostDetailView(item: Item(
+            giverId: "user123",
+            photoUrl: "",
             title: "White T-Shirt",
-            description: "Lorem ipsum is simply dummy text of the printing and typesetting industry. Been the industry's standard dummy text ever since the 1500s.",
+            description: "Lorem ipsum is simply dummy text of the printing and typesetting industry.",
             category: "Clothes",
             condition: "Brand New",
-            pickupArea: "Phaya Thai",
-            imageName: nil,
-            postedBy: "Mansanod Hot",
-            timeAgo: "2m ago"
+            pickUpArea: "Phaya Thai",
+            status: "Available",
+            claimedBy: nil,
+            createdAt: .init()
         ))
     }
 }

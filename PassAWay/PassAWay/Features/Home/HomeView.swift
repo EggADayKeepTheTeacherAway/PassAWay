@@ -5,22 +5,14 @@
 //  Created by SHARK 🦈 on 10/5/26.
 //
 
-
 import SwiftUI
-
+import FirebaseFirestore
+import Combine
 
 
 struct HomeView: View {
-    @State private var searchText = ""
+    @StateObject private var viewModel = HomeViewModel()
     @State private var showSearch = false
-
-    // Sample data
-    let recentItems: [Item] = [
-        Item(title: "White T-Shirt", description: "Lorem ipsum is simply dummy text of the printing and typesetting industry.", category: "Clothes", condition: "Brand New", pickupArea: "Phaya Thai", imageName: nil, postedBy: "Mansanod Hot", timeAgo: "2m ago"),
-        Item(title: "Nike Backpack", description: "Barely used backpack in great condition, perfect for school or travel.", category: "Bags", condition: "Like New", pickupArea: "Lat Phrao", imageName: nil, postedBy: "Sarawut K.", timeAgo: "15m ago"),
-        Item(title: "Green iPad", description: "Old iPad still working fine. Great for reading and light tasks.", category: "Electronics", condition: "Good", pickupArea: "Phaya Thai", imageName: nil, postedBy: "Peter N.", timeAgo: "1h ago"),
-        Item(title: "Wooden Chair", description: "Solid wood chair, minor scratches. Pick up only.", category: "Furniture", condition: "Fair", pickupArea: "Bang Na", imageName: nil, postedBy: "Nathan J.", timeAgo: "3h ago"),
-    ]
 
     var body: some View {
         NavigationStack {
@@ -36,7 +28,7 @@ struct HomeView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Hi, Rattanan 👋")
                                     .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(Color("PassBackground"))
+                                    .foregroundColor(Color("PassPrimary"))
                             }
                             Spacer()
                             NotificationBell()
@@ -79,22 +71,49 @@ struct HomeView: View {
                         .padding(.bottom, 14)
 
                         // MARK: Item Grid
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 12),
-                                GridItem(.flexible(), spacing: 12)
-                            ],
-                            spacing: 14
-                        ) {
-                            ForEach(recentItems) { item in
-                                ItemCard(item: item)
-                            }
-                        }
-                        .padding(.horizontal, 20)
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 60)
+                                .tint(Color("PassPrimary"))
 
-                        // Bottom padding for tab bar
+                        } else if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(.system(size: 13))
+                                .foregroundColor(.red.opacity(0.7))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 40)
+
+                        } else if viewModel.items.isEmpty {
+                            Text("No items available right now.")
+                                .font(.system(size: 14))
+                                .foregroundColor(Color("PassPrimary").opacity(0.5))
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 60)
+
+                        } else {
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.flexible(), spacing: 12),
+                                    GridItem(.flexible(), spacing: 12)
+                                ],
+                                spacing: 14
+                            ) {
+                                ForEach(viewModel.items) { item in
+                                    NavigationLink(destination: PostDetailView(item: item)) {
+                                        ItemCard(item: item)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                        }
+
                         Spacer().frame(height: 100)
                     }
+                }.refreshable {
+                    viewModel.listenToItems()
                 }
 
                 // MARK: Tab Bar
@@ -102,10 +121,11 @@ struct HomeView: View {
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            viewModel.listenToItems()
+        }
     }
 }
-
-
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
@@ -113,3 +133,42 @@ struct HomeView_Previews: PreviewProvider {
             .environment(\.colorScheme, .light)
     }
 }
+
+
+// MARK: - ViewModel
+
+@MainActor
+private final class HomeViewModel: ObservableObject {
+    @Published var items: [Item] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private let db = Firestore.firestore()
+
+    func listenToItems() {
+        isLoading = true
+        db.collection("items")
+            .order(by: "createdAt", descending: true)
+            .limit(to: 20)
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    self.errorMessage = error.localizedDescription
+                    self.isLoading = false
+                    return
+                }
+
+                self.items = []  // reset before each update
+                for doc in snapshot?.documents ?? [] {
+                    do {
+                        let item = try doc.data(as: Item.self)
+                        self.items.append(item)
+                        print("✅ Decoded: \(item.title)")
+                    } catch {
+                        print("❌ Failed to decode \(doc.documentID): \(error)")
+                    }
+                }
+                self.isLoading = false
+            }
+    }
+}
+
