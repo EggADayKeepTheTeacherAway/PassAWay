@@ -18,7 +18,6 @@ struct LoginView: View {
     // MARK: - Authentication State
     @State private var isLoading = false
     @State private var errorMessage: String = ""
-    @State private var navigateToMainFeed = false
     
     // MARK: - Body
     var body: some View {
@@ -129,10 +128,6 @@ struct LoginView: View {
             }
         }
         .navigationBarHidden(true)
-        .navigationDestination(isPresented: $navigateToMainFeed) {
-            Text("MAIN FEED!")
-                .navigationBarBackButtonHidden(true)
-        }
     }
     
     // MARK: - Authentication Methods
@@ -149,15 +144,15 @@ struct LoginView: View {
         
         // Call Firebase to sign the user in
         Auth.auth().signIn(withEmail: email, password: password) { result, error in
-            isLoading = false
-            
+                    isLoading = false
+                    
             if let error = error {
                 errorMessage = error.localizedDescription
                 return
             }
-            
-            // Success! Trigger the navigation to the main feed
-            navigateToMainFeed = true
+                    
+            // Reset the flag on successful login!
+            UserDefaults.standard.set(false, forKey: "wantsDirectLogin")
         }
     }
 }
