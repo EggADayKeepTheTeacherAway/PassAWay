@@ -83,11 +83,17 @@ struct ChatListView: View {
 
 struct ChatRow: View {
     let chat: Chat
+    // TODO: replace with Auth.auth().currentUser?.uid
+    let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
+
+    @State private var otherUserName = "Loading..."
+
+    var otherUserId: String {
+        chat.participants.first { $0 != currentUserId } ?? ""
+    }
 
     var body: some View {
         HStack(spacing: 14) {
-
-            // Avatar
             Circle()
                 .fill(Color("PassLightGreen"))
                 .frame(width: 48, height: 48)
@@ -97,9 +103,8 @@ struct ChatRow: View {
                         .foregroundColor(Color("PassPrimary"))
                 )
 
-            // Name + last message
             VStack(alignment: .leading, spacing: 4) {
-                Text(chat.itemId)
+                Text(otherUserName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Color("PassPrimary"))
                     .lineLimit(1)
@@ -112,7 +117,6 @@ struct ChatRow: View {
 
             Spacer()
 
-            // Timestamp
             Text(chat.lastUpdated.dateValue().timeAgoDisplay())
                 .font(.system(size: 11))
                 .foregroundColor(Color("PassPrimary").opacity(0.4))
@@ -120,6 +124,24 @@ struct ChatRow: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
         .background(Color("PassBackground"))
+        .task {
+            await fetchOtherUser()
+        }
+    }
+
+    func fetchOtherUser() async {
+        guard !otherUserId.isEmpty else { return }
+        do {
+            let doc = try await Firestore.firestore()
+                .collection("users")
+                .document(otherUserId)
+                .getDocument()
+            let user = try doc.data(as: User.self)
+            otherUserName = user.name
+        } catch {
+            print("❌ Failed to fetch user \(otherUserId): \(error)")
+            otherUserName = "Unknown"
+        }
     }
 }
 
@@ -138,7 +160,7 @@ private final class ChatListViewModel: ObservableObject {
         isLoading = true
 
         // TODO: replace with Auth.auth().currentUser?.uid
-        let currentUserId = "BC3vz9m9FffzWrMlf6SKGPRptO92"
+        let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
 
         listener = db.collection("chats")
             .whereField("participants", arrayContains: currentUserId)

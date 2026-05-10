@@ -23,13 +23,34 @@ struct ChatDetailView: View {
     @State private var messageText = ""
 
     // TODO: replace with Auth.auth().currentUser?.uid
-    let currentUserId = "BC3vz9m9FffzWrMlf6SKGPRptO92"
+    let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
 
     init(chat: Chat) {
         self.chat = chat
         _viewModel = StateObject(wrappedValue: ChatDetailViewModel(chatId: chat.id ?? ""))
     }
 
+    @State private var otherUserName = "Loading..."
+
+    var otherUserId: String {
+        chat.participants.first { $0 != currentUserId } ?? ""
+    }
+    
+    func fetchOtherUser() async {
+        guard !otherUserId.isEmpty else { return }
+        do {
+            let doc = try await Firestore.firestore()
+                .collection("users")
+                .document(otherUserId)
+                .getDocument()
+            let user = try doc.data(as: User.self)
+            otherUserName = user.name
+        } catch {
+            print("❌ Failed to fetch user \(otherUserId): \(error)")
+            otherUserName = "Unknown"
+        }
+    }
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             Color("PassBackground")
@@ -48,7 +69,7 @@ struct ChatDetailView: View {
                                 .font(.system(size: 15))
                                 .foregroundColor(Color("PassPrimary"))
                         )
-                    Text(chat.itemId)
+                    Text(otherUserName)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(Color("PassPrimary"))
                     Spacer()
@@ -111,6 +132,9 @@ struct ChatDetailView: View {
         .navigationBarHidden(true)
         .onAppear {
             viewModel.listenToMessages()
+        }
+        .task {
+            await fetchOtherUser()
         }
     }
 
