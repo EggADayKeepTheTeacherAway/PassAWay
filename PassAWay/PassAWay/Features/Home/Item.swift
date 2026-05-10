@@ -18,4 +18,5 @@ struct Item: Identifiable {
     let imageName: String? // system symbol or nil for placeholder
     let postedBy: String
     let timeAgo: String
+    let giverId: String
 }

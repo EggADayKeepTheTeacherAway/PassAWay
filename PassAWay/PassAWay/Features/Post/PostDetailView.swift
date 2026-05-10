@@ -7,10 +7,66 @@
 
 
 import SwiftUI
+import FirebaseFirestore
+
 
 struct PostDetailView: View {
     let item: Item
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var showRequestSheet = false
+    @State private var requestMessage = ""
+    @State private var createdChat: Chat? = nil
+    @State private var navigateToChat = false
+    
+    // TODO: replace with Auth.auth().currentUser?.uid
+    let currentUserId = "BC3vz9m9FffzWrMlf6SKGPRptO92"
+
+    func sendRequest() {
+        let db = Firestore.firestore()
+        let chatRef = db.collection("chats").document()
+
+        let chatData: [String: Any] = [
+            "participants": [currentUserId, item.giverId],
+            "itemId": item.id,
+            "lastMessage": requestMessage,
+            "lastUpdated": Timestamp()
+        ]
+
+        chatRef.setData(chatData) { error in
+            if let error {
+                print("❌ Failed to create chat: \(error)")
+                return
+            }
+
+            // send first message
+            let messageData: [String: Any] = [
+                "senderId": currentUserId,
+                "text": requestMessage,
+                "timestamp": Timestamp()
+            ]
+
+            chatRef.collection("messages").addDocument(data: messageData) { error in
+                if let error {
+                    print("❌ Failed to send message: \(error)")
+                    return
+                }
+
+                let chat = Chat(
+                    id: chatRef.documentID,
+                    participants: [currentUserId, item.giverId],
+                    itemId: item.id.uuidString,
+                    lastMessage: requestMessage,
+                    lastUpdated: Timestamp()
+                )
+
+                DispatchQueue.main.async {
+                    self.createdChat = chat
+                    self.navigateToChat = true
+                }
+            }
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -94,7 +150,7 @@ struct PostDetailView: View {
             VStack(spacing: 0) {
                 Divider().background(Color("PassPrimary").opacity(0.08))
                 Button(action: {
-                    // Claim flow — coming later
+                    showRequestSheet = true
                 }) {
                     Text("Request for this Item")
                         .font(.system(size: 16, weight: .bold))
@@ -110,9 +166,25 @@ struct PostDetailView: View {
             }
         }
         .navigationBarHidden(true)
+        .sheet(isPresented: $showRequestSheet) {
+            RequestSheet(
+                requestMessage: $requestMessage,
+                onConfirm: {
+                    sendRequest()
+                    showRequestSheet = false
+                }
+            )
+            .presentationDetents([.medium])
+        }
+        .navigationDestination(isPresented: $navigateToChat) {
+            if let chat = createdChat {
+                ChatDetailView(chat: chat)
+            }
+        }
+
     }
 }
-
+    
 // MARK: - Meta Row
 
 struct MetaRow: View {
@@ -151,7 +223,8 @@ struct PostDetailView_Previews: PreviewProvider {
             pickupArea: "Phaya Thai",
             imageName: nil,
             postedBy: "Mansanod Hot",
-            timeAgo: "2m ago"
+            timeAgo: "2m ago",
+            giverId: "BC3vz9m9FffzWrMlf6SKGPRptO92"
         ))
     }
 }
