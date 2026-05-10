@@ -2,23 +2,31 @@
 //  ContentView.swift
 //  PassAWay
 //
-//  Created by Nunthapop on 9/5/2569 BE.
+//  Created by SHARK 🦈 on 10/5/26.
 //
 
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    @State private var selectedTab = 0
 
-#Preview {
-    ContentView()
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            switch selectedTab {
+            case 0:
+                HomeView(selectedTab: $selectedTab)
+            case 1:
+                BrowseView()
+            case 2:
+                ChatListView()
+            case 3:
+                ProfileView()
+            default:
+                HomeView(selectedTab: $selectedTab)
+            }
+
+            TabBarView(selectedTab: $selectedTab)
+        }
+        .ignoresSafeArea(edges: .bottom)
+    }
 }

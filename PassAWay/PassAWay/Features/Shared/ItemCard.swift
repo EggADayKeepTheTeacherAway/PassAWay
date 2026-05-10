@@ -16,10 +16,15 @@ struct ItemCard: View {
         NavigationLink(destination: PostDetailView(item: item)) {
             VStack(alignment: .leading, spacing: 0) {            // Image placeholder
                 ZStack(alignment: .bottomLeading) {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color("PassLightGreen"))
-                        .frame(height: 150)
-                    
+                    AsyncImage(url: URL(string: item.photoUrl)) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Color("PassLightGreen")
+                    }
+                    .frame(height: 150)
+                    .clipped()
+                    .cornerRadius(12)
+
                     // Avatar
                     Circle()
                         .fill(Color("PassPrimary"))
