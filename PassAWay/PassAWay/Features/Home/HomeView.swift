@@ -5,22 +5,15 @@
 //  Created by SHARK 🦈 on 10/5/26.
 //
 
-
 import SwiftUI
-
+import FirebaseFirestore
+import Combine
 
 
 struct HomeView: View {
-    @State private var searchText = ""
+    @StateObject private var viewModel = HomeViewModel()
     @State private var showSearch = false
-
-    // Sample data
-    let recentItems: [Item] = [
-        Item(title: "White T-Shirt", description: "Lorem ipsum is simply dummy text of the printing and typesetting industry.", category: "Clothes", condition: "Brand New", pickupArea: "Phaya Thai", imageName: nil, postedBy: "Mansanod Hot", timeAgo: "2m ago"),
-        Item(title: "Nike Backpack", description: "Barely used backpack in great condition, perfect for school or travel.", category: "Bags", condition: "Like New", pickupArea: "Lat Phrao", imageName: nil, postedBy: "Sarawut K.", timeAgo: "15m ago"),
-        Item(title: "Green iPad", description: "Old iPad still working fine. Great for reading and light tasks.", category: "Electronics", condition: "Good", pickupArea: "Phaya Thai", imageName: nil, postedBy: "Peter N.", timeAgo: "1h ago"),
-        Item(title: "Wooden Chair", description: "Solid wood chair, minor scratches. Pick up only.", category: "Furniture", condition: "Fair", pickupArea: "Bang Na", imageName: nil, postedBy: "Nathan J.", timeAgo: "3h ago"),
-    ]
+    @State private var centeredItemId: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -34,9 +27,9 @@ struct HomeView: View {
                         // MARK: Header
                         HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Hi, Rattanan 👋")
+                                Text("Hi, Rattanan")
                                     .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(Color("PassBackground"))
+                                    .foregroundColor(Color("PassPrimary"))
                             }
                             Spacer()
                             NotificationBell()
@@ -45,28 +38,13 @@ struct HomeView: View {
                         .padding(.top, 16)
                         .padding(.bottom, 12)
 
-                        // MARK: Search Bar
-                        HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(Color("PassPrimary").opacity(0.5))
-                                .font(.system(size: 15))
-                            Text("Search for an item...")
-                                .font(.system(size: 14))
-                                .foregroundColor(Color("PassPrimary").opacity(0.45))
-                            Spacer()
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 11)
-                        .background(Color("SearchBg"))
-                        .cornerRadius(12)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-                        .onTapGesture { showSearch = true }
-
+                        Spacer().frame(height: 20)
+                        
                         // MARK: Recently Added
                         HStack {
+
                             Text("Recently Added")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 20, weight: .semibold))
                                 .foregroundColor(Color("PassPrimary"))
                             Spacer()
                             Button("See all") {
@@ -79,22 +57,68 @@ struct HomeView: View {
                         .padding(.bottom, 14)
 
                         // MARK: Item Grid
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 12),
-                                GridItem(.flexible(), spacing: 12)
-                            ],
-                            spacing: 14
-                        ) {
-                            ForEach(recentItems) { item in
-                                ItemCard(item: item)
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 60)
+                                .tint(Color("PassPrimary"))
+
+                        } else if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(.system(size: 13))
+                                .foregroundColor(.red.opacity(0.7))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 40)
+
+                        } else if viewModel.items.isEmpty {
+                            Text("No items available right now.")
+                                .font(.system(size: 14))
+                                .foregroundColor(Color("PassPrimary").opacity(0.5))
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 60)
+
+                        } else {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 14) {
+                                    ForEach(viewModel.items) { item in
+                                        GeometryReader { geo in
+                                            HomeItemCard(item: item)
+                                                .onChange(of: geo.frame(in: .global).midX) { midX in
+                                                    let screenMid = UIScreen.main.bounds.width / 2
+                                                    if abs(midX - screenMid) < 80 {
+                                                        centeredItemId = item.id
+                                                    }
+                                                }
+                                        }
+                                        .frame(width: 260, height: 320)
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                            }
+
+                            // Text below scroll
+                            if let centered = viewModel.items.first(where: { $0.id == centeredItemId }) ?? viewModel.items.first {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(centered.title)
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(Color("PassPrimary"))
+
+                                    Text(centered.description)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(Color("PassPrimary").opacity(0.6))
+                                        .lineLimit(2)
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 12)
+                                .animation(.easeInOut, value: centeredItemId)
                             }
                         }
-                        .padding(.horizontal, 20)
 
-                        // Bottom padding for tab bar
                         Spacer().frame(height: 100)
                     }
+                }.refreshable {
+                    viewModel.listenToItems()
                 }
 
                 // MARK: Tab Bar
@@ -102,10 +126,11 @@ struct HomeView: View {
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            viewModel.listenToItems()
+        }
     }
 }
-
-
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
@@ -113,3 +138,42 @@ struct HomeView_Previews: PreviewProvider {
             .environment(\.colorScheme, .light)
     }
 }
+
+
+// MARK: - ViewModel
+
+@MainActor
+private final class HomeViewModel: ObservableObject {
+    @Published var items: [Item] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private let db = Firestore.firestore()
+
+    func listenToItems() {
+        isLoading = true
+        db.collection("items")
+            .order(by: "createdAt", descending: true)
+            .limit(to: 20)
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    self.errorMessage = error.localizedDescription
+                    self.isLoading = false
+                    return
+                }
+
+                self.items = []  // reset before each update
+                for doc in snapshot?.documents ?? [] {
+                    do {
+                        let item = try doc.data(as: Item.self)
+                        self.items.append(item)
+                        print("✅ Decoded: \(item.title)")
+                    } catch {
+                        print("❌ Failed to decode \(doc.documentID): \(error)")
+                    }
+                }
+                self.isLoading = false
+            }
+    }
+}
+
