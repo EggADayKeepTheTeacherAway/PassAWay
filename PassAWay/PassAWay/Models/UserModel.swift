@@ -22,9 +22,16 @@ struct User: Codable {
     var level: Int
     var itemsListed: Int
     var itemsGivenAway: Int
-    
+    var xp: Int?
     // @ServerTimestamp tells Firebase to automatically stamp this with the exact time it hits the database
     @ServerTimestamp var createdAt: Date?
+    
+    var calculatedMaxXp: Int {
+        // Base 100 XP, multiplied by 1.25 for every level they gain
+        let baseXP = 100.0
+        let multiplier = pow(1.25, Double(level - 1))
+        return Int(baseXP * multiplier)
+    }
 }
 
 struct LocationData: Codable {
