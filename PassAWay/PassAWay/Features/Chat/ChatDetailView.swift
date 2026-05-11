@@ -413,7 +413,7 @@ private final class ChatDetailViewModel: ObservableObject {
     ) {
         print("respondToRequest: give or no: \(accept)")
 
-        let chatStatus = accept
+        let messageStatus = accept
             ? "Accepted"
             : "Rejected"
 
@@ -421,17 +421,38 @@ private final class ChatDetailViewModel: ObservableObject {
             ? "Claimed"
             : "Available"
 
-        db.collection("chats")
-            .document(chatId)
-            .updateData([
-                "status": chatStatus
-            ])
-
         db.collection("items")
             .document(itemId)
             .updateData([
                 "status": itemStatus
             ])
+        
+        // Also update the status of the latest request message in this chat
+        db.collection("chats")
+            .document(chatId)
+            .collection("messages")
+            .whereField("type", isEqualTo: "request")
+            .order(by: "timestamp", descending: true)
+            .limit(to: 1)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("❌ Failed to fetch request message: \(error)")
+                    return
+                }
+
+                guard let doc = snapshot?.documents.first else {
+                    print("ℹ️ No request message found to update status.")
+                    return
+                }
+
+                doc.reference.updateData(["status": messageStatus]) { err in
+                    if let err = err {
+                        print("❌ Failed to update request message status: \(err)")
+                    } else {
+                        print("✅ Updated request message status to \(messageStatus)")
+                    }
+                }
+            }
     }
 
     deinit {
