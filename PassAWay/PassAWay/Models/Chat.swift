@@ -31,4 +31,5 @@ struct Message: Identifiable, Codable {
     var text: String
     var timestamp: Timestamp
     var type: String?
+    var status: String?
 }

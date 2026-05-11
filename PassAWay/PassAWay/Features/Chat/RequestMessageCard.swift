@@ -5,10 +5,6 @@
 //  Created by SHARK 🦈 on 11/5/26.
 //
 
-
-import SwiftUI
-import FirebaseFirestore
-
 import SwiftUI
 import FirebaseFirestore
 
@@ -26,10 +22,18 @@ struct RequestMessageCard: View {
         print("   currentUserId: \(currentUserId)")
         print("   message.senderId: \(message.senderId)")
         print("   giverId: \(giverId)")
+        
+        print("Message: ", message)
+        print("ItemStatus: ", itemStatus)
         return result
     }
-
+    
+    @State private var itemStatus: String = ""
     @State private var itemPhoto: String = ""
+    
+    private var requestStatus: String? {
+        message.status // this is String?
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -43,7 +47,7 @@ struct RequestMessageCard: View {
             .clipped()
             .cornerRadius(12)
 
-            if isGiver {
+            if isGiver && itemStatus == "Available" {
                 HStack(spacing: 0) {
                     Button(action: onNo) {
                         Text("No")
@@ -65,23 +69,51 @@ struct RequestMessageCard: View {
                 .cornerRadius(8)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color("PassPrimary").opacity(0.15)))
             }
+            else if requestStatus == "Accepted" {
+                HStack {
+                    Text("Request approved")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.green)
+                        .clipShape(Capsule())
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 8)
+            }
+            else if requestStatus == "Rejected" {
+                HStack {
+                    Text("Request rejected")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 8)
+            }
         }
         .background(Color("PassLightGreen").opacity(0.3))
         .cornerRadius(12)
         .frame(maxWidth: 260, alignment: .leading)
         .task {
-            await fetchItemPhoto()
+            await fetchItem()
         }
     }
 
-    func fetchItemPhoto() async {
+    func fetchItem() async {
         do {
             let doc = try await Firestore.firestore()
                 .collection("items")
                 .document(itemId)
                 .getDocument()
             let item = try doc.data(as: Item.self)
+            print("Item", item)
             itemPhoto = item.photoUrl
+            
         } catch {
             print("❌ Failed to fetch item photo: \(error)")
         }
@@ -97,7 +129,8 @@ struct RequestMessageCard_Previews: PreviewProvider {
                 senderId: "BC3vz9m9FffzWrMlf6SKGPRptO92",
                 text: "I want this!",
                 timestamp: Timestamp(seconds: 1778448434, nanoseconds: 0),
-                type: "request"
+                type: "request",
+//                status: "Accepted"
             ),
             itemId: "iyE1MNFzO5NTh418DIy8",
             giverId: "szjx9ml8XhgFsEDBgEnH8L3DYPq1",
@@ -106,5 +139,6 @@ struct RequestMessageCard_Previews: PreviewProvider {
             onNo: { print("No tapped") }
         )
         .padding()
+        
     }
 }
