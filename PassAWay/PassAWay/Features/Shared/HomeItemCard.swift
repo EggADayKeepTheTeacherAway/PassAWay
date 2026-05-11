@@ -45,32 +45,6 @@ struct HomeItemCard: View {
                         .padding(8)
                 }
 
-//                // Text below image
-//                VStack(alignment: .leading, spacing: 6) {
-//                    Text(item.title)
-//                        .font(.system(size: 14, weight: .bold))
-//                        .foregroundColor(Color("PassPrimary"))
-//                        .lineLimit(1)
-//
-//                    Text(item.description)
-//                        .font(.system(size: 12))
-//                        .foregroundColor(Color("PassPrimary").opacity(0.6))
-//                        .lineLimit(2)
-//                        .fixedSize(horizontal: false, vertical: true)
-//
-//                    Text("See more")
-//                        .font(.system(size: 11, weight: .semibold))
-//                        .foregroundColor(.white)
-//                        .padding(.horizontal, 10)
-//                        .padding(.vertical, 5)
-//                        .background(Color("PassPrimary"))
-//                        .cornerRadius(6)
-//                        .padding(.top, 2)
-//                }
-//                .padding(.horizontal, 12)
-//                .padding(.vertical, 10)
-//                .frame(width: 260, alignment: .leading)
-//                .background(Color.white)
             }
             .frame(width: 260)
             .background(Color.white)

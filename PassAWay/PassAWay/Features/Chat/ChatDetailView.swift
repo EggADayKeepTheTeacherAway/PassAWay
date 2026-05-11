@@ -29,8 +29,10 @@ struct ChatDetailView: View {
     let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
 
     init(chat: Chat) {
+        print("ChatDetailViewInit")
         self.chat = chat
         _viewModel = StateObject(wrappedValue: ChatDetailViewModel(chatId: chat.id ?? ""))
+        print("ChatDetailViewInit Success")
     }
 
     @State private var otherUserName = "Loading..."
@@ -257,5 +259,20 @@ private final class ChatDetailViewModel: ObservableObject {
         db.collection("chats").document(chatId).updateData([
             "status": status
         ])
+    }
+}
+
+
+struct ChatDetailView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationStack {
+            ChatDetailView(chat: Chat(
+                id: "0PqoJ62fvxqslYoGcImQ",
+                participants: ["BC3vz9m9FffzWrMlf6SKGPRptO92", "szjx9ml8XhgFsEDBgEnH8L3DYPq1"],
+                itemId: "iyE1MNFzO5NTh418DIy8",
+                lastMessage: "Gib",
+                lastUpdated: Timestamp(seconds: 1778448434, nanoseconds: 286214000)
+            ))
+        }
     }
 }

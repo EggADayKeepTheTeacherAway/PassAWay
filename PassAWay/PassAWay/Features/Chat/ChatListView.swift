@@ -11,74 +11,77 @@ import FirebaseFirestore
 import Combine
 
 struct ChatListView: View {
-    @StateObject private var viewModel = ChatListViewModel()
-    @State private var selectedChat: Chat? = nil
-    @State private var navigateToChat = false
-    
+    @StateObject private var viewModel = ChatListViewModel()    
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color("PassBackground")
-                    .ignoresSafeArea()
+        ZStack {
+            Color("PassBackground")
+                .ignoresSafeArea()
 
-                VStack(spacing: 0) {
+            VStack(spacing: 0) {
 
-                    // MARK: Header
-                    Text("Chat")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(Color("PassPrimary"))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
-                        .padding(.bottom, 16)
+                // MARK: Header
+                Text("Chat")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(Color("PassPrimary"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 16)
 
-                    Divider()
-                        .background(Color("PassPrimary").opacity(0.1))
+                Divider()
+                    .background(Color("PassPrimary").opacity(0.1))
 
-                    // MARK: Content
-                    if viewModel.isLoading {
-                        Spacer()
-                        ProgressView()
-                            .tint(Color("PassPrimary"))
-                        Spacer()
+                // MARK: Content
+                if viewModel.isLoading {
+                    Spacer()
+                    ProgressView()
+                        .tint(Color("PassPrimary"))
+                    Spacer()
 
-                    } else if viewModel.chats.isEmpty {
-                        Spacer()
-                        VStack(spacing: 12) {
-                            Image(systemName: "bubble.left.and.bubble.right")
-                                .font(.system(size: 48))
-                                .foregroundColor(Color("PassPrimary").opacity(0.2))
-                            Text("No conversations yet.")
-                                .font(.system(size: 14))
-                                .foregroundColor(Color("PassPrimary").opacity(0.5))
-                        }
-                        Spacer()
-
-                    } else {
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                ForEach(viewModel.chats) { chat in
-                                    ChatRow(chat: chat)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            selectedChat = chat
-                                            navigateToChat = true
-                                        }
-                                    Divider()
-                                        .background(Color("PassPrimary").opacity(0.08))
-                                        .padding(.leading, 76)
-                                }
+                } else if viewModel.chats.isEmpty {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.system(size: 48))
+                            .foregroundColor(Color("PassPrimary").opacity(0.2))
+                        Text("No conversations yet.")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color("PassPrimary").opacity(0.5))
+                        Button(action: { viewModel.refresh() }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Refresh")
                             }
-                            .padding(.bottom, 100)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color("PassPrimary"))
+                            .cornerRadius(10)
                         }
                     }
+                    Spacer()
+
+                } else {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            ForEach(viewModel.chats) { chat in
+                                ChatRow(chat: chat)
+                                    .contentShape(Rectangle())
+                                Divider()
+                                    .background(Color("PassPrimary").opacity(0.08))
+                                    .padding(.leading, 76)
+                            }
+                        }
+                        .padding(.bottom, 100)
+                    }
+                    .refreshable {
+                        viewModel.refresh()
+                    }
                 }
-            }
-            .navigationDestination(isPresented: $navigateToChat) {
-                if let chat = selectedChat {
-                    ChatDetailView(chat: chat)
-                }
+                
+                TabBarView(selectedTab: .constant(2))
             }
         }
     }
@@ -95,6 +98,15 @@ private final class ChatListViewModel: ObservableObject {
 
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
+    
+    func refresh() {
+        isLoading = true
+        listener?.remove()
+        listener = nil
+        chats = []
+        listenToChats()
+        isLoading = false
+    }
 
     func listenToChats() {
         print("🔍 listenToChats called, listener: \(listener != nil ? "exists" : "nil")")
@@ -110,13 +122,25 @@ private final class ChatListViewModel: ObservableObject {
             .order(by: "lastUpdated", descending: true)
             .addSnapshotListener { snapshot, error in
                 print("📡 snapshot received, docs: \(snapshot?.documents.count ?? 0), error: \(error?.localizedDescription ?? "none")")
-                // rest of code
+                if let error {
+                    print("❌ error: \(error.localizedDescription)")
+                    self.isLoading = false
+                    return
+                }
+                self.chats = []
+                for doc in snapshot?.documents ?? [] {
+                    do {
+                        let chat = try doc.data(as: Chat.self)
+                        self.chats.append(chat)
+                        print("✅ Decoded chat: \(chat.id ?? "no id")")
+                    } catch {
+                        print("❌ Failed to decode chat \(doc.documentID): \(error)")
+                    }
+                }
+                self.isLoading = false
             }
     }
 
-    deinit {
-        listener?.remove()
-    }
 }
 
 
