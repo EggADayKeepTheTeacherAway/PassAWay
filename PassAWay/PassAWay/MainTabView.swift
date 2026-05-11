@@ -22,9 +22,7 @@ struct MainTabView: View {
                 case 1:
                     BrowseView()
                 case 2:
-                    Text("Chat Feature Coming Soon!") // Placeholder
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color("PassBackground").ignoresSafeArea())
+                    ChatListView()
                 case 3:
                     ProfileView()
                 default:
