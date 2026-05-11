@@ -219,7 +219,7 @@ struct ProfileView: View {
                 }
                 
                 // MARK: - Bottom Tab Bar
-                TabBarView(selectedTab: .constant(0))
+//                TabBarView(selectedTab: .constant(0))
             }
         }
         .navigationBarHidden(true)

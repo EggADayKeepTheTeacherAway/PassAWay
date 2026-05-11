@@ -124,7 +124,7 @@ struct HomeView: View {
             }
 
             // MARK: Tab Bar
-            TabBarView(selectedTab: .constant(0))
+//            TabBarView(selectedTab: .constant(0))
         }
         .navigationBarHidden(true)
         .onAppear {

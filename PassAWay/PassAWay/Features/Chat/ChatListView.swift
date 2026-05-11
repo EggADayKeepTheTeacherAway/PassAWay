@@ -81,7 +81,7 @@ struct ChatListView: View {
                     }
                 }
                 
-                TabBarView(selectedTab: .constant(2))
+//                TabBarView(selectedTab: .constant(2))
             }
         }
     }

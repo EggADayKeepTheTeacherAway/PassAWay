@@ -123,7 +123,7 @@ struct BrowseView: View {
             // Bottom Tab Bar
             VStack {
                 Spacer()
-                TabBarView(selectedTab: .constant(1))
+//                TabBarView(selectedTab: .constant(1))
             }
         }
         .toolbar(.hidden, for: .navigationBar)
