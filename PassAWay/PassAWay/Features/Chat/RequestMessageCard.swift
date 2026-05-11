@@ -21,7 +21,12 @@ struct RequestMessageCard: View {
     let onNo: () -> Void
 
     var isGiver: Bool {
-        currentUserId == giverId
+        let result = currentUserId != message.senderId
+        print("🔍 isGiver: \(result)")
+        print("   currentUserId: \(currentUserId)")
+        print("   message.senderId: \(message.senderId)")
+        print("   giverId: \(giverId)")
+        return result
     }
 
     @State private var itemPhoto: String = ""
@@ -43,10 +48,10 @@ struct RequestMessageCard: View {
                     Button(action: onNo) {
                         Text("No")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(Color("PassPrimary"))
+                            .foregroundColor(Color.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .background(Color.white)
+                            .background(Color.black)
                     }
                     Button(action: onGive) {
                         Text("Give")
@@ -54,7 +59,7 @@ struct RequestMessageCard: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .background(Color("PassPrimary"))
+                            .background(Color.black)
                     }
                 }
                 .cornerRadius(8)
@@ -80,5 +85,26 @@ struct RequestMessageCard: View {
         } catch {
             print("❌ Failed to fetch item photo: \(error)")
         }
+    }
+}
+
+
+struct RequestMessageCard_Previews: PreviewProvider {
+    static var previews: some View {
+        RequestMessageCard(
+            message: Message(
+                id: "msg1",
+                senderId: "BC3vz9m9FffzWrMlf6SKGPRptO92",
+                text: "I want this!",
+                timestamp: Timestamp(seconds: 1778448434, nanoseconds: 0),
+                type: "request"
+            ),
+            itemId: "iyE1MNFzO5NTh418DIy8",
+            giverId: "szjx9ml8XhgFsEDBgEnH8L3DYPq1",
+            currentUserId: "szjx9ml8XhgFsEDBgEnH8L3DYPq1",
+            onGive: { print("Give tapped") },
+            onNo: { print("No tapped") }
+        )
+        .padding()
     }
 }
