@@ -12,16 +12,14 @@ import FirebaseAuth
 import Combine
 
 struct ChatListView: View {
-    @StateObject private var viewModel = ChatListViewModel()    
-    
+    @StateObject private var viewModel = ChatListViewModel()
+    @State private var selectedChat: Chat? = nil
+
     var body: some View {
         ZStack {
-            Color("PassBackground")
-                .ignoresSafeArea()
+            Color("PassBackground").ignoresSafeArea()
 
             VStack(spacing: 0) {
-
-                // MARK: Header
                 Text("Chat")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(Color("PassPrimary"))
@@ -31,13 +29,10 @@ struct ChatListView: View {
                     .padding(.bottom, 16)
 
                 Divider()
-                    .background(Color("PassPrimary").opacity(0.1))
 
-                // MARK: Content
                 if viewModel.isLoading {
                     Spacer()
-                    ProgressView()
-                        .tint(Color("PassPrimary"))
+                    ProgressView().tint(Color("PassPrimary"))
                     Spacer()
 
                 } else if viewModel.chats.isEmpty {
@@ -65,22 +60,24 @@ struct ChatListView: View {
                     Spacer()
 
                 } else {
-                    List {
-                        ForEach(viewModel.chats) { chat in
-                            ChatRow(chat: chat)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color("PassBackground"))
-                                .listRowSeparator(.hidden)
-                        }
+                    List(viewModel.chats) { chat in
+                        ChatRow(chat: chat)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color("PassBackground"))
+                            .listRowSeparator(.hidden)
+                            .onTapGesture {
+                                selectedChat = chat
+                            }
                     }
                     .listStyle(.plain)
                     .refreshable {
                         viewModel.refresh()
                     }
                 }
-                
-//                TabBarView(selectedTab: .constant(2))
             }
+        }
+        .navigationDestination(item: $selectedChat) { chat in
+            ChatDetailView(chat: chat)
         }
         .onAppear {
             viewModel.listenToChats()

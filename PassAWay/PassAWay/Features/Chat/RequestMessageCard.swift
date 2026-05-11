@@ -31,10 +31,8 @@ struct RequestMessageCard: View {
     @State private var itemStatus: String = ""
     @State private var itemPhoto: String = ""
     
-    private var requestStatus: String? {
-        message.status // this is String?
-    }
-
+    @State private var requestStatus: String?
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             AsyncImage(url: URL(string: itemPhoto)) { image in
@@ -53,9 +51,12 @@ struct RequestMessageCard: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
 
-            if isGiver && itemStatus == "Available" {
+            if isGiver && itemStatus == "Available" && requestStatus == nil {
                 HStack(spacing: 0) {
-                    Button(action: onNo) {
+                    Button(action: {
+                        onNo()
+                        requestStatus = "Rejected"
+                    }) {
                         Text("No")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(Color.white)
@@ -63,7 +64,10 @@ struct RequestMessageCard: View {
                             .padding(.vertical, 10)
                             .background(Color.black)
                     }
-                    Button(action: onGive) {
+                    Button(action: {
+                        onGive()
+                        requestStatus = "Accepted"
+                    }) {
                         Text("Give")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
@@ -107,6 +111,7 @@ struct RequestMessageCard: View {
         .frame(maxWidth: 260, alignment: .leading)
         .task {
             await fetchItem()
+            requestStatus = message.status
         }
     }
 
@@ -119,6 +124,7 @@ struct RequestMessageCard: View {
             let item = try doc.data(as: Item.self)
             print("Item", item)
             itemPhoto = item.photoUrl
+            itemStatus = item.status
             
         } catch {
             print("❌ Failed to fetch item photo: \(error)")

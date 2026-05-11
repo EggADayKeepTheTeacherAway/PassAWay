@@ -16,12 +16,20 @@
 import Foundation
 import FirebaseFirestore
 
-struct Chat: Identifiable, Codable {
+struct Chat: Identifiable, Codable, Hashable {
     @DocumentID var id: String?
     var participants: [String]
     var itemId: String
     var lastMessage: String
     var lastUpdated: Timestamp
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: Chat, rhs: Chat) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 

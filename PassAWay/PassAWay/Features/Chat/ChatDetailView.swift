@@ -414,21 +414,15 @@ private final class ChatDetailViewModel: ObservableObject {
     ) {
         print("respondToRequest: give or no: \(accept)")
 
-        let messageStatus = accept
-            ? "Accepted"
-            : "Rejected"
+        let messageStatus = accept ? "Accepted" : "Rejected"
+        let itemStatus = accept ? "Claimed" : "Available"
 
-        let itemStatus = accept
-            ? "Claimed"
-            : "Available"
-
+        // Update item status
         db.collection("items")
             .document(itemId)
-            .updateData([
-                "status": itemStatus
-            ])
-        
-        // Also update the status of the latest request message in this chat
+            .updateData(["status": itemStatus])
+
+        // Update this chat's request message
         db.collection("chats")
             .document(chatId)
             .collection("messages")
@@ -436,24 +430,39 @@ private final class ChatDetailViewModel: ObservableObject {
             .order(by: "timestamp", descending: true)
             .limit(to: 1)
             .getDocuments { snapshot, error in
-                if let error = error {
+                if let error {
                     print("❌ Failed to fetch request message: \(error)")
                     return
                 }
-
-                guard let doc = snapshot?.documents.first else {
-                    print("ℹ️ No request message found to update status.")
-                    return
-                }
-
-                doc.reference.updateData(["status": messageStatus]) { err in
-                    if let err = err {
-                        print("❌ Failed to update request message status: \(err)")
-                    } else {
-                        print("✅ Updated request message status to \(messageStatus)")
-                    }
+                snapshot?.documents.first?.reference.updateData(["status": messageStatus]) { err in
+                    if let err { print("❌ \(err)") }
+                    else { print("✅ Updated this chat's request to \(messageStatus)") }
                 }
             }
+
+        // If accepted, reject all other chats' request messages for this item
+        if accept {
+            db.collection("chats")
+                .whereField("itemId", isEqualTo: itemId)
+                .getDocuments { snapshot, error in
+                    if let error {
+                        print("❌ Failed to fetch other chats: \(error)")
+                        return
+                    }
+                    for doc in snapshot?.documents ?? [] {
+                        guard doc.documentID != chatId else { continue } // skip current chat
+                        doc.reference
+                            .collection("messages")
+                            .whereField("type", isEqualTo: "request")
+                            .getDocuments { msgSnapshot, _ in
+                                for msgDoc in msgSnapshot?.documents ?? [] {
+                                    msgDoc.reference.updateData(["status": "Rejected"])
+                                }
+                            }
+                    }
+                    print("✅ Rejected all other request messages for item \(itemId)")
+                }
+        }
     }
 
     deinit {
