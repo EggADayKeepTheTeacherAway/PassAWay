@@ -9,11 +9,15 @@ import SwiftUI
 import PhotosUI
 
 struct CreatePostView: View {
+    @StateObject private var viewModel = CreatePostViewModel()
+    @Environment(\.dismiss) var dismiss
     
     // MARK: - Input State
     @State private var title: String = ""
     @State private var description: String = ""
     @State private var pickupArea: String = ""
+    @State private var latitude: Double? = nil
+    @State private var longitude: Double? = nil
     
     @State private var category: String? = nil
     @State private var condition: String? = nil
@@ -21,10 +25,12 @@ struct CreatePostView: View {
     // MARK: - Custom Dropdown States
     @State private var isCategoryExpanded: Bool = false
     @State private var isConditionExpanded: Bool = false
+    @State private var isShowingMapPicker: Bool = false
     
     // MARK: - Photo Picker State
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var selectedImage: Image? = nil
+    @State private var selectedUIImage: UIImage? = nil
     
     // MARK: - Dropdown Options
     let categories = ["Food", "Clothes", "Electronics", "Books", "Household", "Other"]
@@ -89,6 +95,7 @@ struct CreatePostView: View {
                     .onChange(of: selectedPhotoItem) { oldValue, newValue in
                         Task {
                             if let data = try? await newValue?.loadTransferable(type: Data.self), let uiImage = UIImage(data: data) {
+                                selectedUIImage = uiImage
                                 selectedImage = Image(uiImage: uiImage)
                             }
                         }
@@ -166,20 +173,14 @@ struct CreatePostView: View {
                                                     .padding(.horizontal)
                                                     .frame(height: 44)
                                             }
-                                            
-                                            if cat != categories.last {
-                                                Divider().padding(.horizontal)
-                                            }
+                                            if cat != categories.last { Divider().padding(.horizontal) }
                                         }
                                     }
                                     .background(Color.white)
                                 }
                             }
                             .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: isCategoryExpanded ? 1 : 0)
-                            )
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: isCategoryExpanded ? 1 : 0))
                         }
                         
                         // Custom Condition Dropdown
@@ -222,57 +223,87 @@ struct CreatePostView: View {
                                                     .padding(.horizontal)
                                                     .frame(height: 44)
                                             }
-                                            
-                                            if cond != conditions.last {
-                                                Divider().padding(.horizontal)
-                                            }
+                                            if cond != conditions.last { Divider().padding(.horizontal) }
                                         }
                                     }
                                     .background(Color.white)
                                 }
                             }
                             .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: isConditionExpanded ? 1 : 0)
-                            )
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: isConditionExpanded ? 1 : 0))
                         }
                         
-                        // Pickup Area Field
+                        // MARK: - NEW MAP TRIGGER
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Pickup Area")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(Color("PassPrimary"))
                             
-                            HStack {
-                                Image(systemName: "mappin.and.ellipse")
-                                    .foregroundColor(Color("PassPrimary"))
-                                TextField("Enter pickup location (e.g., Campus Center)", text: $pickupArea)
+                            Button(action: {
+                                isShowingMapPicker = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "mappin.and.ellipse")
+                                        .foregroundColor(Color("PassPrimary"))
+                                    Text(pickupArea.isEmpty ? "Tap to select location on map" : pickupArea)
+                                        .foregroundColor(pickupArea.isEmpty ? .gray.opacity(0.8) : .primary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.gray)
+                                        .font(.caption)
+                                }
+                                .padding(.horizontal)
+                                .frame(height: 44)
+                                .background(Color("PassLightGreen"))
+                                .cornerRadius(10)
                             }
-                            .padding(.horizontal)
-                            .frame(height: 44)
-                            .background(Color("PassLightGreen"))
-                            .cornerRadius(10)
                         }
                     }
                     
                     // MARK: - Submit Button & Footer
                     VStack(spacing: 15) {
-                        Button(action: {
-                            // TODO: Implement Firebase storage and Firestore save logic here
-                            print("Posting item...")
-                        }) {
-                            Text("Post Item")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(Color("PassPrimary"))
-                                .cornerRadius(10)
+                        if !viewModel.errorMessage.isEmpty {
+                            Text(viewModel.errorMessage)
+                                .foregroundColor(.red)
+                                .font(.footnote)
+                                .multilineTextAlignment(.center)
                         }
-                        .disabled(title.isEmpty || pickupArea.isEmpty || category == nil || condition == nil || selectedImage == nil)
-                        .opacity((title.isEmpty || pickupArea.isEmpty || category == nil || condition == nil || selectedImage == nil) ? 0.5 : 1.0)
+                        
+                        Button(action: {
+                            guard let uiImage = selectedUIImage else { return }
+                            
+                            viewModel.uploadPost(
+                                title: title,
+                                description: description,
+                                category: category ?? "",
+                                condition: condition ?? "",
+                                pickUpArea: pickupArea,
+                                latitude: latitude ?? 0.0,   // Passes the new coordinates
+                                longitude: longitude ?? 0.0, // Passes the new coordinates
+                                image: uiImage
+                            ) {
+                                dismiss()
+                            }
+                        }) {
+                            ZStack {
+                                if viewModel.isLoading {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Text("Post Item")
+                                        .font(.headline)
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color("PassPrimary"))
+                            .cornerRadius(10)
+                        }
+                        // Added location variables to the disable validation
+                        .disabled(title.isEmpty || pickupArea.isEmpty || category == nil || condition == nil || selectedUIImage == nil || latitude == nil || longitude == nil || viewModel.isLoading)
+                        .opacity((title.isEmpty || pickupArea.isEmpty || category == nil || condition == nil || selectedUIImage == nil || latitude == nil || longitude == nil) ? 0.5 : 1.0)
                         .padding(.top, 15)
                     }
                     
@@ -282,6 +313,10 @@ struct CreatePostView: View {
             }
         }
         .navigationBarHidden(true)
+        // Present the Map Sheet
+        .sheet(isPresented: $isShowingMapPicker) {
+            PostLocationPickerView(selectedAddress: $pickupArea, latitude: $latitude, longitude: $longitude)
+        }
     }
 }
 
