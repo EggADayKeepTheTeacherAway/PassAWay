@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct BrowseView: View {
+    @StateObject private var viewModel = BrowseViewModel()
     @State private var isSearchActive: Bool = false
     
     // MARK: - Filter & Sort States
@@ -16,13 +17,6 @@ struct BrowseView: View {
     
     @State private var selectedSort: String = "Recently Added"
     let sortOptions = ["Recently Added", "Near Me", "Everywhere"]
-    
-    // Mock Data
-    let mockItems = [
-        "White T-shirt", "White T-shirt 1",
-        "White T-shirt 2", "White T-shirt 3",
-        "Nike Backpack", "Green Ipad"
-    ]
     
     let columns = [
         GridItem(.flexible(), spacing: 15),
@@ -71,15 +65,14 @@ struct BrowseView: View {
                                             .fontWeight(.bold)
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 8)
-                                            // Highlight if selected, light green if not
                                             .background(selectedCategory == category ? Color("PassPrimary") : Color("PassLightGreen"))
                                             .foregroundColor(selectedCategory == category ? .white : Color("PassPrimary"))
                                             .cornerRadius(20)
                                     }
                                 }
                             }
-                            .padding(.horizontal, 25)
                         }
+                        .padding(.horizontal, 25)
                         
                         // Sort / Location Dropdown Menu
                         HStack {
@@ -109,15 +102,34 @@ struct BrowseView: View {
                     }
                     
                     // MARK: - Grid Content
-                    ScrollView(showsIndicators: false) {
-                        LazyVGrid(columns: columns, spacing: 20) {
-                            ForEach(mockItems, id: \.self) { item in
-                                GridItemCard(title: item)
+                    if viewModel.isLoading {
+                        Spacer()
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color("PassPrimary")))
+                            .frame(maxWidth: .infinity)
+                        Spacer()
+                    } else if viewModel.items.isEmpty {
+                        Spacer()
+                        Text("No items found.")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity)
+                        Spacer()
+                    } else {
+                        ScrollView(showsIndicators: false) {
+                            LazyVGrid(columns: columns, spacing: 20) {
+                                ForEach(viewModel.items) { item in
+                                    NavigationLink(destination: PostDetailView(item: item)) {
+                                        // Make sure your GridItemCard expects an 'Item' object instead of a String!
+                                        GridItemCard(item: item)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
+                            .padding(.horizontal, 25)
+                            .padding(.top, 5)
+                            .padding(.bottom, 100)
                         }
-                        .padding(.horizontal, 25)
-                        .padding(.top, 5)
-                        .padding(.bottom, 100)
                     }
                 }
             }
