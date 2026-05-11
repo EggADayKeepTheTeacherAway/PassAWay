@@ -9,6 +9,7 @@ import SwiftUI
 import FirebaseFirestore
 //import FirebaseFirestoreSwift
 import Combine
+import FirebaseAuth
 
 struct ChatDetailView: View {
     let chat: Chat
@@ -17,7 +18,7 @@ struct ChatDetailView: View {
     @State private var messageText = ""
     @State private var otherUserName = "Loading..."
 
-    private let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
+    private let currentUserId = Auth.auth().currentUser?.uid ?? ""
 
     private var otherUserId: String {
         chat.participants.first { $0 != currentUserId } ?? ""

@@ -20,7 +20,7 @@ struct PostDetailView: View {
     @State private var navigateToChat = false
     
     // TODO: replace with Auth.auth().currentUser?.uid
-    let currentUserId = "BC3vz9m9FffzWrMlf6SKGPRptO92"
+    let currentUserId = Auth.auth().currentUser?.uid ?? ""
 
     func sendRequest() {
         let db = Firestore.firestore()
@@ -79,18 +79,28 @@ struct PostDetailView: View {
 
                     // MARK: Hero Image
                     ZStack(alignment: .topLeading) {
-                        AsyncImage(url: URL(string: item.photoUrl)) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Color("PassLightGreen")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 300)
-                        .clipped()
+                        GeometryReader { geo in
+                            Color.clear
+                                .overlay(
+                                    AsyncImage(url: URL(string: item.photoUrl)) { image in image
+                                            .resizable()
+                                            .scaledToFill()
+                                    } placeholder: {
+                                        ZStack {
+                                            Color("PassLightGreen")
+                                            ProgressView().tint(Color("PassPrimary"))
+                                        }
+                                    }
+                                )
+                                .frame(width: geo.size.width, height: 300)
+                                .clipped()
+                            }
+                            .frame(height: 300)
 
-                        BackButton()
-                            .padding(.top, 52)
-                            .padding(.leading, 20)
+                            BackButton()
+                                .padding(.top, 52)
+                                .padding(.leading, 20)
+                                .buttonStyle(.plain)
                     }
 
                     // MARK: Content Card
@@ -219,7 +229,9 @@ struct PostDetailView_Previews: PreviewProvider {
             description: "Lorem ipsum is simply dummy text of the printing and typesetting industry.",
             category: "Clothes",
             condition: "Brand New",
-            pickUpArea: "Phaya Thai",
+            pickUpArea: "Kasetsart",
+            latitude: 13.8475, 
+            longitude: 100.5696,
             status: "Available",
             claimedBy: nil,
             createdAt: .init()

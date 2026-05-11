@@ -94,7 +94,7 @@ private final class ChatListViewModel: ObservableObject {
     @Published var chats: [Chat] = []
     @Published var isLoading = false
     
-    let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
+    let currentUserId = Auth.auth().currentUser?.uid ?? ""
 
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?

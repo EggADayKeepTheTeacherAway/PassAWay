@@ -11,7 +11,7 @@ import Combine
 
 
 struct HomeView: View {
-    @Binding var selectedTab: Int
+//    @Binding var selectedTab: Int
     
     @StateObject private var viewModel = HomeViewModel()
     @State private var showSearch = false
@@ -136,7 +136,7 @@ struct HomeView: View {
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
-            HomeView(selectedTab: .constant(0))
+            HomeView()
         }
     }
 }

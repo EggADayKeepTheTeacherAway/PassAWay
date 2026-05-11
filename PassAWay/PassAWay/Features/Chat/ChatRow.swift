@@ -10,7 +10,7 @@ import FirebaseFirestore
 
 struct ChatRow: View {
     let chat: Chat
-    let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
+    let currentUserId = Auth.auth().currentUser?.uid ?? ""
     @StateObject private var userFetcher = UserFetcher()
 
     var otherUserId: String {
