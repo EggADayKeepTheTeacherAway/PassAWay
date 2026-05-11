@@ -8,7 +8,9 @@
 import SwiftUI
 
 struct TabBarView: View {
-    @Binding var selectedTab: Int
+    @Binding var selected: Int
+    var onAddTapped: () -> Void 
+
 
     var tabs: [(icon: String, label: String)] = [
         ("house.fill", "Home"),
@@ -23,8 +25,10 @@ struct TabBarView: View {
                 Spacer()
 
                 if i == 2 {
-                    // FAB center Add button
-                    Button(action: {}) {
+
+                    Button(action: {
+                        onAddTapped() // TRIGGER THE ACTION HERE
+                    }) {
                         Image(systemName: "plus")
                             .font(.system(size: 22, weight: .bold))
                             .foregroundColor(.white)

@@ -18,6 +18,8 @@ struct Item: Identifiable, Codable {
     var category: String
     var condition: String
     var pickUpArea: String
+    var latitude: Double  
+    var longitude: Double
     var status: String
     var claimedBy: String?
     var createdAt: Timestamp
