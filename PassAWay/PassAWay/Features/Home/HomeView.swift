@@ -87,7 +87,7 @@ struct HomeView: View {
                                             GeometryReader { geo in
                                                 HomeItemCard(item: item)
                                                     .onChange(of: geo.frame(in: .global).midX) {
-                                                        let screenMid = UIScreen.main.bounds.width / 2
+                                                        let screenMid = screenGeo.size.width / 2
                                                         if abs(geo.frame(in: .global).midX - screenMid) < 80 {
                                                             centeredItemId = item.id
                                                         }

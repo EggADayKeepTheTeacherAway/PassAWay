@@ -8,7 +8,7 @@
 import Foundation
 import FirebaseFirestore
 
-struct User: Codable {
+struct AppUser: Codable {
     // @DocumentID automatically grabs the Firebase document name (which will be their Auth UID)
     @DocumentID var id: String?
     

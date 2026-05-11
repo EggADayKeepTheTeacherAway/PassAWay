@@ -21,7 +21,10 @@ struct ChatDetailView: View {
     let chat: Chat
     @StateObject private var viewModel: ChatDetailViewModel
     @State private var messageText = ""
+    
+    private let db = Firestore.firestore()
 
+    
     // TODO: replace with Auth.auth().currentUser?.uid
     let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
 
@@ -43,12 +46,101 @@ struct ChatDetailView: View {
                 .collection("users")
                 .document(otherUserId)
                 .getDocument()
-            let user = try doc.data(as: User.self)
+            let user = try doc.data(as: AppUser.self)
             otherUserName = user.name
         } catch {
             print("❌ Failed to fetch user \(otherUserId): \(error)")
             otherUserName = "Unknown"
         }
+    }
+    
+    
+    
+    var header: some View {
+        HStack(spacing: 12) {
+            BackButton()
+            Circle()
+                .fill(Color("PassLightGreen"))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 15))
+                        .foregroundColor(Color("PassPrimary"))
+                )
+            Text(otherUserName)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color("PassPrimary"))
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(Color("PassBackground"))
+    }
+
+    @ViewBuilder
+    func messageView(for message: Message) -> some View {
+        if message.type ?? "" == "request" {
+            RequestMessageCard(
+                message: message,
+                itemId: chat.itemId,
+                giverId: chat.participants.first { $0 != currentUserId } ?? "",
+                currentUserId: currentUserId,
+                onGive: { viewModel.respondToRequest(chatId: chat.id ?? "", accept: true) },
+                onNo: { viewModel.respondToRequest(chatId: chat.id ?? "", accept: false) }
+            )
+        } else {
+            MessageBubble(
+                message: message,
+                isMe: message.senderId == currentUserId
+            )
+        }
+    }
+    
+    var messageList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    ForEach(viewModel.messages) { message in
+                        messageView(for: message)
+                            .id(message.id)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .padding(.bottom, 80)
+            }
+            .onChange(of: viewModel.messages.count) {
+                if let last = viewModel.messages.last {
+                    withAnimation {
+                        proxy.scrollTo(last.id, anchor: .bottom)
+                    }
+                }
+            }
+        }
+    }
+
+    var inputBar: some View {
+        HStack(spacing: 12) {
+            TextField("Type your message...", text: $messageText)
+                .font(.system(size: 14))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color("SearchBg"))
+                .cornerRadius(20)
+
+            Button(action: sendMessage) {
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white)
+                    .frame(width: 38, height: 38)
+                    .background(messageText.isEmpty ? Color("PassPrimary").opacity(0.4) : Color("PassPrimary"))
+                    .clipShape(Circle())
+            }
+            .disabled(messageText.isEmpty)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color("PassBackground"))
     }
     
     var body: some View {
@@ -57,85 +149,16 @@ struct ChatDetailView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-
-                // MARK: Header
-                HStack(spacing: 12) {
-                    BackButton()
-                    Circle()
-                        .fill(Color("PassLightGreen"))
-                        .frame(width: 36, height: 36)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 15))
-                                .foregroundColor(Color("PassPrimary"))
-                        )
-                    Text(otherUserName)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color("PassPrimary"))
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(Color("PassBackground"))
-
+                header
                 Divider().background(Color("PassPrimary").opacity(0.1))
-
-                // MARK: Messages
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 10) {
-                            ForEach(viewModel.messages) { message in
-                                MessageBubble(
-                                    message: message,
-                                    isMe: message.senderId == currentUserId
-                                )
-                                .id(message.id)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .padding(.bottom, 80)
-                    }
-                    .onChange(of: viewModel.messages.count) {
-                        if let last = viewModel.messages.last {
-                            withAnimation {
-                                proxy.scrollTo(last.id, anchor: .bottom)
-                            }
-                        }
-                    }
-                }
-
-                // MARK: Input Bar
-                HStack(spacing: 12) {
-                    TextField("Type your message...", text: $messageText)
-                        .font(.system(size: 14))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Color("SearchBg"))
-                        .cornerRadius(20)
-
-                    Button(action: sendMessage) {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.white)
-                            .frame(width: 38, height: 38)
-                            .background(messageText.isEmpty ? Color("PassPrimary").opacity(0.4) : Color("PassPrimary"))
-                            .clipShape(Circle())
-                    }
-                    .disabled(messageText.isEmpty)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color("PassBackground"))
+                messageList
             }
+
+            inputBar
         }
         .navigationBarHidden(true)
-        .onAppear {
-            viewModel.listenToMessages()
-        }
-        .task {
-            await fetchOtherUser()
-        }
+        .onAppear { viewModel.listenToMessages() }
+        .task { await fetchOtherUser() }
     }
 
     func sendMessage() {
@@ -227,5 +250,12 @@ private final class ChatDetailViewModel: ObservableObject {
 
     deinit {
         listener?.remove()
+    }
+    
+    func respondToRequest(chatId: String, accept: Bool) {
+        let status = accept ? "accepted" : "rejected"
+        db.collection("chats").document(chatId).updateData([
+            "status": status
+        ])
     }
 }

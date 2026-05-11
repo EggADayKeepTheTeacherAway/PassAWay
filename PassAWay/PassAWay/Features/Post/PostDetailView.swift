@@ -43,7 +43,8 @@ struct PostDetailView: View {
             let messageData: [String: Any] = [
                 "senderId": currentUserId,
                 "text": requestMessage,
-                "timestamp": Timestamp()
+                "timestamp": Timestamp(),
+                "type": "request"
             ]
 
             chatRef.collection("messages").addDocument(data: messageData) { error in

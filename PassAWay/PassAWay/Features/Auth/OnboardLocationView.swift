@@ -248,7 +248,7 @@ struct OnboardLocationView: View {
                 address_string: selectedAddress
             )
             
-            let newUser = User(
+            let newUser = AppUser(
                 id: uid,
                 user_id: uid,
                 username: username,

@@ -12,7 +12,10 @@ import Combine
 
 struct ChatListView: View {
     @StateObject private var viewModel = ChatListViewModel()
-
+    @State private var selectedChat: Chat? = nil
+    @State private var navigateToChat = false
+    
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -56,11 +59,12 @@ struct ChatListView: View {
                         ScrollView {
                             VStack(spacing: 0) {
                                 ForEach(viewModel.chats) { chat in
-                                    NavigationLink(destination: ChatDetailView(chat: chat)) {
-                                        ChatRow(chat: chat)
-                                    }
-                                    .buttonStyle(.plain)
-
+                                    ChatRow(chat: chat)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            selectedChat = chat
+                                            navigateToChat = true
+                                        }
                                     Divider()
                                         .background(Color("PassPrimary").opacity(0.08))
                                         .padding(.leading, 76)
@@ -71,116 +75,42 @@ struct ChatListView: View {
                     }
                 }
             }
-            .navigationBarHidden(true)
-            .onAppear {
-                viewModel.listenToChats()
+            .navigationDestination(isPresented: $navigateToChat) {
+                if let chat = selectedChat {
+                    ChatDetailView(chat: chat)
+                }
             }
         }
     }
 }
 
-// MARK: - Chat Row
-
-struct ChatRow: View {
-    let chat: Chat
-    // TODO: replace with Auth.auth().currentUser?.uid
-    let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
-
-    @State private var otherUserName = "Loading..."
-
-    var otherUserId: String {
-        chat.participants.first { $0 != currentUserId } ?? ""
-    }
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Circle()
-                .fill(Color("PassLightGreen"))
-                .frame(width: 48, height: 48)
-                .overlay(
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(Color("PassPrimary"))
-                )
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(otherUserName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color("PassPrimary"))
-                    .lineLimit(1)
-
-                Text(chat.lastMessage)
-                    .font(.system(size: 13))
-                    .foregroundColor(Color("PassPrimary").opacity(0.5))
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            Text(chat.lastUpdated.dateValue().timeAgoDisplay())
-                .font(.system(size: 11))
-                .foregroundColor(Color("PassPrimary").opacity(0.4))
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(Color("PassBackground"))
-        .task {
-            await fetchOtherUser()
-        }
-    }
-
-    func fetchOtherUser() async {
-        guard !otherUserId.isEmpty else { return }
-        do {
-            let doc = try await Firestore.firestore()
-                .collection("users")
-                .document(otherUserId)
-                .getDocument()
-            let user = try doc.data(as: User.self)
-            otherUserName = user.name
-        } catch {
-            print("❌ Failed to fetch user \(otherUserId): \(error)")
-            otherUserName = "Unknown"
-        }
-    }
-}
-
-// MARK: - ViewModel
+// MARK: - Chat List View Model
 
 @MainActor
 private final class ChatListViewModel: ObservableObject {
     @Published var chats: [Chat] = []
     @Published var isLoading = false
+    
+    let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
 
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
 
     func listenToChats() {
-        guard listener == nil else { return }
+        print("🔍 listenToChats called, listener: \(listener != nil ? "exists" : "nil")")
+        guard listener == nil else {
+            print("⚠️ listener already exists, chats count: \(chats.count)")
+            return
+        }
         isLoading = true
-
-        // TODO: replace with Auth.auth().currentUser?.uid
-        let currentUserId = "szjx9ml8XhgFsEDBgEnH8L3DYPq1"
+        print("👤 currentUserId: \(currentUserId)")
 
         listener = db.collection("chats")
             .whereField("participants", arrayContains: currentUserId)
             .order(by: "lastUpdated", descending: true)
             .addSnapshotListener { snapshot, error in
-                if let error {
-                    print("❌ Chat fetch error: \(error.localizedDescription)")
-                    self.isLoading = false
-                    return
-                }
-                self.chats = []
-                for doc in snapshot?.documents ?? [] {
-                    do {
-                        let chat = try doc.data(as: Chat.self)
-                        self.chats.append(chat)
-                    } catch {
-                        print("❌ Failed to decode chat \(doc.documentID): \(error)")
-                    }
-                }
-                self.isLoading = false
+                print("📡 snapshot received, docs: \(snapshot?.documents.count ?? 0), error: \(error?.localizedDescription ?? "none")")
+                // rest of code
             }
     }
 
@@ -188,6 +118,36 @@ private final class ChatListViewModel: ObservableObject {
         listener?.remove()
     }
 }
+
+
+// MARK: - User Fetcher
+
+@MainActor
+class UserFetcher: ObservableObject {
+    @Published var name = "Loading..."
+    
+    func fetch(userId: String) async {
+        print("🔍 Fetching user: \(userId)")
+        guard !userId.isEmpty else {
+            print("❌ userId is empty")
+            return
+        }
+        do {
+            let doc = try await Firestore.firestore()
+                .collection("users")
+                .document(userId)
+                .getDocument()
+            print("📄 Doc exists: \(doc.exists), data: \(doc.data() ?? [:])")
+            let user = try doc.data(as: AppUser.self)
+            print("✅ Got user: \(user.name)")
+            name = user.name
+        } catch {
+            print("❌ Failed: \(error)")
+            name = "Unknown"
+        }
+    }
+}
+
 
 // MARK: - Date Helper
 
@@ -204,6 +164,9 @@ extension Date {
 
 struct ChatList_Previews: PreviewProvider {
     static var previews: some View {
-        ChatListView()
+        NavigationStack {
+            ChatListView()
+        }
     }
 }
+
