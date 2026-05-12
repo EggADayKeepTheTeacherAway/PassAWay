@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseFirestore
+//import FirebaseFirestoreSwift
 import Combine
 import FirebaseAuth
 
@@ -64,12 +65,15 @@ struct HomeView: View {
                                 .tint(Color("PassPrimary"))
 
                         } else if let error = viewModel.errorMessage {
-                            Text(error)
-                                .font(.system(size: 13))
-                                .foregroundColor(.red.opacity(0.7))
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 20)
-                                .padding(.top, 40)
+                            VStack {
+                                Text("Uh oh, something went wrong. Please try again later.")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.red.opacity(0.7))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 20)
+                                    .onAppear { print("Error:  \(error)") }
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
                         } else if viewModel.items.isEmpty {
                             Text("No items available right now.")
@@ -168,25 +172,33 @@ private final class HomeViewModel: ObservableObject {
     func listenToItems() {
         isLoading = true
         db.collection("items")
+            .whereField("status", isEqualTo: "Available")
             .order(by: "createdAt", descending: true)
             .limit(to: 20)
             .addSnapshotListener { snapshot, error in
-                if let error {
+                if let error = error {
                     self.errorMessage = error.localizedDescription
                     self.isLoading = false
                     return
                 }
 
-                self.items = []  // reset before each update
-                for doc in snapshot?.documents ?? [] {
+                guard let documents = snapshot?.documents else {
+                    self.items = []
+                    self.isLoading = false
+                    return
+                }
+
+                var newItems: [Item] = []
+                for doc in documents {
                     do {
                         let item = try doc.data(as: Item.self)
-                        self.items.append(item)
+                        newItems.append(item)
                         print("✅ Decoded: \(item.title)")
                     } catch {
                         print("❌ Failed to decode \(doc.documentID): \(error)")
                     }
                 }
+                self.items = newItems
                 self.isLoading = false
             }
     }

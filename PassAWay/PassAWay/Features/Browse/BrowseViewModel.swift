@@ -23,6 +23,7 @@ class BrowseViewModel: ObservableObject {
     func fetchItems() {
         isLoading = true
         db.collection("items")
+            .whereField("status", isEqualTo: "Available")
             .order(by: "createdAt", descending: true)
             .addSnapshotListener { snapshot, error in
                 self.isLoading = false
