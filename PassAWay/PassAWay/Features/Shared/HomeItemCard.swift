@@ -34,14 +34,7 @@ struct HomeItemCard: View {
                     .cornerRadius(12)
 
                     // Avatar
-                    Circle()
-                        .fill(Color("PassPrimary"))
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 13))
-                                .foregroundColor(.white)
-                        )
+                    UserAvatarView(userId: item.giverId, size: 28)
                         .padding(8)
                 }
 
