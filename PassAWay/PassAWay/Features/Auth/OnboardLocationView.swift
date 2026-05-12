@@ -9,6 +9,7 @@ import SwiftUI
 import MapKit
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseStorage
 
 struct OnboardLocationView: View {
     @Environment(\.dismiss) var dismiss
@@ -18,9 +19,9 @@ struct OnboardLocationView: View {
     var email: String
     var username: String
     var password: String
+    var profileImage: UIImage
     
     // MARK: - Map State
-    // Default location initialized to Kasetsart University Bangkhen
     @State private var position: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 13.8473, longitude: 100.5696),
@@ -29,7 +30,6 @@ struct OnboardLocationView: View {
     )
     
     @State private var selectedAddress: String = "Finding location..."
-    
     @State private var currentCoordinate = CLLocationCoordinate2D(latitude: 13.8473, longitude: 100.5696)
     
     // MARK: - Authentication State
@@ -75,10 +75,7 @@ struct OnboardLocationView: View {
                 .frame(height: 44)
                 .background(Color.white)
                 .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                )
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
                 .padding(.horizontal, 25)
                 .padding(.bottom, 15)
                 
@@ -99,8 +96,7 @@ struct OnboardLocationView: View {
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "location.fill")
-                                    Text("Current Location")
-                                        .fontWeight(.bold)
+                                    Text("Current Location").fontWeight(.bold)
                                 }
                                 .font(.footnote)
                                 .foregroundColor(Color("PassPrimary"))
@@ -135,7 +131,6 @@ struct OnboardLocationView: View {
                 // Confirmation Footer
                 VStack(spacing: 15) {
                     
-                    // Error Display
                     if !errorMessage.isEmpty {
                         Text(errorMessage)
                             .font(.footnote)
@@ -148,14 +143,12 @@ struct OnboardLocationView: View {
                         .foregroundColor(.gray)
                         .padding(.top, 10)
                     
-                    // Final Submission Button
                     Button(action: {
                         createFirebaseAccount(coordinate: currentCoordinate)
                     }) {
                         ZStack {
                             if isLoading {
-                                ProgressView()
-                                    .tint(.white)
+                                ProgressView().tint(.white)
                             } else {
                                 Text("Confirm Location")
                                     .font(.headline)
@@ -181,20 +174,13 @@ struct OnboardLocationView: View {
     }
     
     // MARK: - Location Services
-    
-    /// Converts latitude and longitude into a readable street or city address
     private func fetchAddressFromCoordinates(coordinate: CLLocationCoordinate2D) {
         Task {
             let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-            
-            guard let request = MKReverseGeocodingRequest(location: location) else {
-                await MainActor.run { selectedAddress = "Invalid Location" }
-                return
-            }
+            guard let request = MKReverseGeocodingRequest(location: location) else { return }
             
             do {
                 let mapItems = try await request.mapItems
-                
                 if let mapItem = mapItems.first {
                     let name = mapItem.name ?? ""
                     let city = mapItem.addressRepresentations?.cityName ?? mapItem.addressRepresentations?.regionName ?? ""
@@ -202,77 +188,74 @@ struct OnboardLocationView: View {
                     await MainActor.run {
                         if !name.isEmpty && !city.isEmpty && name != city {
                             selectedAddress = "\(name), \(city)"
-                        } else if !name.isEmpty {
-                            selectedAddress = name
-                        } else if !city.isEmpty {
-                            selectedAddress = city
-                        } else {
-                            selectedAddress = "Unknown Area"
-                        }
+                        } else if !name.isEmpty { selectedAddress = name
+                        } else if !city.isEmpty { selectedAddress = city
+                        } else { selectedAddress = "Unknown Area" }
                     }
                 }
             } catch {
-                await MainActor.run {
-                    selectedAddress = "Locating..."
-                }
+                await MainActor.run { selectedAddress = "Locating..." }
             }
         }
     }
     
-    // MARK: - Authentication & Database
-    
-    /// Creates the Firebase Auth credential and saves the public User object to Firestore
+    // MARK: - Authentication, Image Upload & Database
     private func createFirebaseAccount(coordinate: CLLocationCoordinate2D) {
         isLoading = true
         errorMessage = ""
         
-        // 1. Initialize Firebase Auth user
-        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
-            if let error = error {
-                errorMessage = error.localizedDescription
-                isLoading = false
-                return
-            }
-            
-            guard let uid = authResult?.user.uid else { return }
-            
-            // 2. Construct the Firestore User document
-            let userLocation = LocationData(
-                latitude: coordinate.latitude,
-                longitude: coordinate.longitude,
-                address_string: selectedAddress
-            )
-            
-            let newUser = User(
-                id: uid,
-                user_id: uid,
-                username: username,
-                email: email,
-                name: name,
-                profileImageUrl: "",
-                bio: "New to PassAWay!",
-                location: userLocation,
-                level: 1,
-                itemsListed: 0,
-                itemsGivenAway: 0
-            )
-            
-            // 3. Write data to the users collection
-            let db = Firestore.firestore()
+        Task {
             do {
-                try db.collection("users").document(uid).setData(from: newUser) { error in
-                    if let error = error {
-                        errorMessage = error.localizedDescription
-                        isLoading = false
-                        return
-                    }
+                // 1. Create the Auth User
+                let authResult = try await Auth.auth().createUser(withEmail: email, password: password)
+                let uid = authResult.user.uid
+                
+                // 2. Upload the Profile Image
+                var uploadedImageUrl = ""
+                
+                if let imageData = profileImage.jpegData(compressionQuality: 0.5) {
+                    let storageRef = Storage.storage().reference().child("profile_images/\(uid).jpg")
+                    // Upload the data
+                    let _ = try await storageRef.putDataAsync(imageData)
+                    // Retrieve the public URL
+                    let downloadURL = try await storageRef.downloadURL()
+                    uploadedImageUrl = downloadURL.absoluteString
                 }
+                
+                // 3. Construct the Firestore User document
+                let userLocation = LocationData(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude,
+                    address_string: selectedAddress
+                )
+                
+                let newUser = User(
+                    id: uid,
+                    user_id: uid,
+                    username: username,
+                    email: email,
+                    name: name,
+                    profileImageUrl: uploadedImageUrl, 
+                    bio: "New to PassAWay!",
+                    location: userLocation,
+                    level: 1,
+                    itemsListed: 0,
+                    itemsGivenAway: 0
+                )
+                
+                // 4. Save to Firestore
+                try db.collection("users").document(uid).setData(from: newUser)
+                
+                
             } catch {
-                errorMessage = error.localizedDescription
-                isLoading = false
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isLoading = false
+                }
             }
         }
     }
+    private let db = Firestore.firestore()
 }
 
 // MARK: - Preview
@@ -281,6 +264,7 @@ struct OnboardLocationView: View {
         name: "Test User",
         email: "test@kasetsart.ac.th",
         username: "tester123",
-        password: "password123"
+        password: "password123",
+        profileImage: UIImage()
     )
 }
