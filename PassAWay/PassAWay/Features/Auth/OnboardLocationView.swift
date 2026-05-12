@@ -36,6 +36,10 @@ struct OnboardLocationView: View {
     @State private var isLoading = false
     @State private var errorMessage: String = ""
     
+    @State private var searchResults: [MKMapItem] = []
+    @State private var isSearching = false
+    @State private var searchTask: Task<Void, Never>? = nil
+    
     // MARK: - Body
     var body: some View {
         ZStack {
@@ -66,10 +70,20 @@ struct OnboardLocationView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(Color("PassPrimary"))
-                    
                     TextField("Search address...", text: $selectedAddress)
                         .font(.subheadline)
                         .foregroundColor(.primary)
+                        .onChange(of: selectedAddress) {
+                            searchTask?.cancel()
+                            searchTask = Task {
+                                try? await Task.sleep(nanoseconds: 400_000_000)
+                                guard !Task.isCancelled else { return }
+                                await searchLocation()
+                            }
+                        }
+                    if isSearching {
+                        ProgressView().tint(Color("PassPrimary"))
+                    }
                 }
                 .padding(.horizontal)
                 .frame(height: 44)
@@ -77,7 +91,38 @@ struct OnboardLocationView: View {
                 .cornerRadius(10)
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
                 .padding(.horizontal, 25)
-                .padding(.bottom, 15)
+                
+                if !searchResults.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(searchResults, id: \.self) { item in
+                            Button(action: { selectResult(item) }) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .foregroundColor(Color("PassPrimary"))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.name ?? "")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundColor(Color("PassPrimary"))
+                                            .lineLimit(1)
+                                        Text(item.placemark.title ?? "")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.gray)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                            }
+                            Divider().padding(.leading, 44)
+                        }
+                    }
+                    .background(Color.white)
+                    .cornerRadius(10)
+                    .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 2)
+                    .padding(.horizontal, 25)
+                    .padding(.bottom, 8)
+                }
                 
                 // Interactive Map Component
                 ZStack {
@@ -86,30 +131,6 @@ struct OnboardLocationView: View {
                             currentCoordinate = context.region.center
                             fetchAddressFromCoordinates(coordinate: context.region.center)
                         }
-                    
-                    // Current Location Request Button
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                // TODO: Implement CoreLocation manager logic
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "location.fill")
-                                    Text("Current Location").fontWeight(.bold)
-                                }
-                                .font(.footnote)
-                                .foregroundColor(Color("PassPrimary"))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(Color.white)
-                                .clipShape(Capsule())
-                                .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 3)
-                            }
-                        }
-                        .padding(15)
-                        Spacer()
-                    }
                     
                     // Center Target Pin
                     VStack(spacing: 0) {
@@ -256,6 +277,34 @@ struct OnboardLocationView: View {
         }
     }
     private let db = Firestore.firestore()
+    
+    func searchLocation() async {
+        guard !selectedAddress.isEmpty else {
+            searchResults = []
+            return
+        }
+        isSearching = true
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = selectedAddress
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            searchResults = Array(response.mapItems.prefix(5))
+        } catch {
+            print("❌ Search error: \(error)")
+        }
+        isSearching = false
+    }
+
+    func selectResult(_ item: MKMapItem) {
+        let coord = item.placemark.coordinate
+        position = .region(MKCoordinateRegion(
+            center: coord,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        ))
+        currentCoordinate = coord
+        selectedAddress = item.name ?? ""
+        searchResults = []
+    }
 }
 
 // MARK: - Preview
