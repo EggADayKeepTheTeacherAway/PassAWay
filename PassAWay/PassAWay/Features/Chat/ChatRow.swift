@@ -20,14 +20,9 @@ struct ChatRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Circle()
-                .fill(Color("PassLightGreen"))
-                .frame(width: 48, height: 48)
-                .overlay(
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(Color("PassPrimary"))
-                )
+            UserAvatarView(userId: otherUserId, size: 48)
+                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(userFetcher.name)
                     .font(.system(size: 14, weight: .semibold))

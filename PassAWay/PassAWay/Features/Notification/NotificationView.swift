@@ -7,47 +7,12 @@
 
 import SwiftUI
 
-// MARK: - Mock Data Models
-struct NotificationItem: Identifiable {
-    let id = UUID()
-    let userName: String
-    let action: String
-    let itemName: String
-    let timeAgo: String
-    let isUnread: Bool
-    let avatarImage: String
-}
-
-struct NotificationSection: Identifiable {
-    let id = UUID()
-    let title: String
-    let items: [NotificationItem]
-}
-
 struct NotificationView: View {
     @Environment(\.dismiss) var dismiss
+    @StateObject private var viewModel = NotificationViewModel()
     
-    // Change to 'true' to see the Empty State, 'false' for the Populated State
-    @State private var showEmptyState: Bool = false
-    
-    // MARK: - Mock Data
-    let sections = [
-        NotificationSection(title: "New", items: [
-            NotificationItem(userName: "Mansanod", action: "made a request to claim your", itemName: "White T-shirt.", timeAgo: "4m ago", isUnread: true, avatarImage: "person.crop.circle.fill"),
-            NotificationItem(userName: "Perter", action: "made a request to claim your", itemName: "White T-shirt.", timeAgo: "4m ago", isUnread: true, avatarImage: "person.crop.circle.fill")
-        ]),
-        NotificationSection(title: "Today", items: [
-            NotificationItem(userName: "Sarawut", action: "made a request to claim your", itemName: "White T-shirt.", timeAgo: "2h ago", isUnread: false, avatarImage: "person.crop.circle.fill")
-        ]),
-        NotificationSection(title: "Yesterday", items: [
-            NotificationItem(userName: "Nathan", action: "made a request to claim your", itemName: "White T-shirt.", timeAgo: "1d ago", isUnread: false, avatarImage: "person.crop.circle.fill")
-        ])
-    ]
-    
-    // MARK: - Body
     var body: some View {
         ZStack {
-            // Background
             Color("PassBackground")
                 .ignoresSafeArea()
             
@@ -55,9 +20,7 @@ struct NotificationView: View {
                 
                 // MARK: - Custom Header
                 HStack(spacing: 12) {
-                    Button(action: {
-                        dismiss()
-                    }) {
+                    Button(action: { dismiss() }) {
                         Image(systemName: "arrow.left")
                             .font(.title2)
                             .fontWeight(.bold)
@@ -75,11 +38,14 @@ struct NotificationView: View {
                 .padding(.bottom, 20)
                 
                 // MARK: - Content Area
-                if showEmptyState {
+                if viewModel.isLoading {
+                    Spacer()
+                    ProgressView().tint(Color("PassPrimary"))
+                    Spacer()
+                } else if viewModel.unreadItems.isEmpty && viewModel.readItems.isEmpty {
                     // EMPTY STATE
                     VStack {
                         Spacer()
-                        
                         ZStack {
                             Circle()
                                 .fill(Color("PassLightGreen"))
@@ -97,24 +63,36 @@ struct NotificationView: View {
                             .font(.title2)
                             .fontWeight(.heavy)
                             .foregroundColor(Color("PassPrimary"))
-                        
                         Spacer()
                     }
                 } else {
-                    // OPULATED STATE
+                    // POPULATED STATE
                     ScrollView {
                         VStack(alignment: .leading, spacing: 30) {
-                            ForEach(sections) { section in
+                            
+                            // UNREAD SECTION
+                            if !viewModel.unreadItems.isEmpty {
                                 VStack(alignment: .leading, spacing: 15) {
-                                    
-                                    // Section Title (New, Today, Yesterday)
-                                    Text(section.title)
+                                    Text("New")
                                         .font(.title3)
                                         .fontWeight(.bold)
                                         .foregroundColor(Color("PassPrimary"))
                                     
-                                    // Notification Items in this section
-                                    ForEach(section.items) { item in
+                                    ForEach(viewModel.unreadItems) { item in
+                                        NotificationRow(item: item)
+                                    }
+                                }
+                            }
+                            
+                            // READ SECTION
+                            if !viewModel.readItems.isEmpty {
+                                VStack(alignment: .leading, spacing: 15) {
+                                    Text("Earlier")
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(Color("PassPrimary"))
+                                    
+                                    ForEach(viewModel.readItems) { item in
                                         NotificationRow(item: item)
                                     }
                                 }
@@ -127,52 +105,55 @@ struct NotificationView: View {
             }
         }
         .navigationBarHidden(true)
+        .onDisappear {
+            // When they leave the screen, mark everything as read!
+            viewModel.markAllAsRead()
+        }
     }
 }
 
 // MARK: - Individual Notification Row View
 struct NotificationRow: View {
-    var item: NotificationItem
+    var item: NotificationUIItem
     
     var body: some View {
         HStack(alignment: .top, spacing: 15) {
             
-            // Avatar
-            Image(systemName: item.avatarImage)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 50, height: 50)
-                .clipShape(Circle())
-                .foregroundColor(Color("PassPrimary").opacity(0.8))
-                .background(Circle().fill(Color.white).shadow(color: .black.opacity(0.1), radius: 3, y: 2))
+            // SMART AVATAR: Pulls their real profile picture based on the senderId!
+            UserAvatarView(userId: item.notification.senderId, size: 50)
+                .shadow(color: .black.opacity(0.1), radius: 3, y: 2)
             
             // Text Content & Divider
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .top) {
-                                    
-                    // Main Notification Text (FIXED: Kept strictly as 'Text' types)
-                    Text("\(Text(item.userName).fontWeight(.semibold)) \(Text("\(item.action) “\(item.itemName)”").foregroundStyle(Color("PassPrimary").opacity(0.9)))")
+                    
+                    // Dynamic Message Builder based on Notification Type
+                    let actionText = item.notification.type == "request_received" ? "made a request to claim your" : "sent an update regarding"
+                    
+                    Text("\(Text(item.senderName).fontWeight(.semibold)) \(Text("\(actionText) “\(item.notification.body)”").foregroundStyle(Color("PassPrimary").opacity(0.9)))")
                         .foregroundColor(Color("PassPrimary"))
-                                    
+                        .fixedSize(horizontal: false, vertical: true)
+                    
                     Spacer()
-                                    
+                    
                     // Unread Dot Indicator
-                    if item.isUnread {
+                    if !item.notification.isRead {
                         Circle()
-                        .fill(Color("PassPrimary"))
-                        .frame(width: 8, height: 8)
-                        .padding(.top, 6)
+                            .fill(Color("PassPrimary"))
+                            .frame(width: 8, height: 8)
+                            .padding(.top, 6)
                     }
                 }
                 .font(.subheadline)
                 .lineSpacing(4)
                 
-                // Time Ago
-                Text(item.timeAgo)
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                // Formats the Date into a readable string
+                if let date = item.notification.createdAt {
+                    Text(date.formatted(.relative(presentation: .named)))
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
                 
-                // Custom thin divider aligned with text
                 Divider()
                     .padding(.top, 5)
             }
@@ -180,7 +161,6 @@ struct NotificationRow: View {
     }
 }
 
-// MARK: - Preview
 #Preview {
     NotificationView()
 }

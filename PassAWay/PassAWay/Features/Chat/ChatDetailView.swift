@@ -13,6 +13,7 @@ import FirebaseAuth
 
 struct ChatDetailView: View {
     let chat: Chat
+    @Environment(\.dismiss) var dismiss
 
     @StateObject private var viewModel: ChatDetailViewModel
     @State private var messageText = ""
@@ -72,16 +73,22 @@ private extension ChatDetailView {
     }
 
     var headerView: some View {
-        HStack(spacing: 12) {
-
-            BackButton()
-
-            profileIcon
-
-            Text(otherUserName)
-                .font(.system(size: 16, weight: .semibold))
+        HStack {
+            Button(action: { dismiss() }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .bold))
+                        
+                    // Profile Icon
+                    UserAvatarView(userId: otherUserId, size: 36)
+                    
+                    // Username
+                    Text(otherUserName)
+                        .font(.system(size: 18, weight: .bold))
+                }
                 .foregroundColor(Color("PassPrimary"))
-
+            }
+                
             Spacer()
         }
         .padding(.horizontal, 20)
@@ -279,16 +286,18 @@ struct MessageBubble: View {
 
     var body: some View {
 
-        HStack {
+        HStack(alignment: .bottom, spacing: 8) {
 
             if isMe {
-                Spacer()
+                Spacer(minLength: 0)
+            } else {
+                UserAvatarView(userId: message.senderId, size: 28)
             }
 
             bubbleContent
 
             if !isMe {
-                Spacer()
+                Spacer(minLength: 0)
             }
         }
     }

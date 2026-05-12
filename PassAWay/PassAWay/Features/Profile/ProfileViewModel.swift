@@ -30,23 +30,34 @@ class ProfileViewModel: ObservableObject {
             self.isLoading = false
             return
         }
-        
-        Task {
-            do {
-                let document = try await db.collection("users").document(uid).getDocument()
-                
-                if document.exists {
-                    self.currentUser = try document.data(as: User.self)
-                    
-                    self.fetchMyItems(uid: uid)
-                    
-                } else {
-                    print("User document does not exist.")
-                }
-            } catch {
-                print("Error fetching or decoding user: \(error.localizedDescription)")
-            }
             
+        db.collection("users").document(uid).addSnapshotListener { documentSnapshot, error in
+            if let error = error {
+                print("Error fetching user: \(error.localizedDescription)")
+                self.isLoading = false
+                return
+            }
+                
+            guard let document = documentSnapshot, document.exists else {
+                print("User document does not exist.")
+                self.isLoading = false
+                return
+            }
+                
+            do {
+                let user = try document.data(as: User.self)
+                self.currentUser = user
+                
+                // 1. Fetch their items
+                self.fetchMyItems(uid: uid)
+                    
+                // 2. TRIGGER THE LEVEL UP LOGIC!
+                self.checkLevelUp(user: user)
+                    
+            } catch {
+                print("Error decoding user: \(error.localizedDescription)")
+            }
+                
             self.isLoading = false
         }
     }
@@ -62,6 +73,30 @@ class ProfileViewModel: ObservableObject {
             }
     }
     
+    func checkLevelUp(user: User) {
+        let currentXp = user.xp ?? 0
+        let maxXp = user.calculatedMaxXp
+            
+        if currentXp >= maxXp {
+            let newLevel = user.level + 1
+            let leftoverXp = currentXp - maxXp
+            
+            // Update Firestore
+            guard let uid = user.id else { return }
+            
+            db.collection("users").document(uid).updateData([
+                "level": newLevel,
+                "xp": leftoverXp
+            ]) { error in
+                if let error = error {
+                    print("❌ Error leveling up: \(error.localizedDescription)")
+                } else {
+                    print("✅ Leveled up to \(newLevel) with \(leftoverXp) leftover XP")
+                }
+            }
+        }
+    }
+    
     func logOut() {
         do {
             UserDefaults.standard.set(true, forKey: "wantsDirectLogin")
@@ -70,4 +105,5 @@ class ProfileViewModel: ObservableObject {
             print("Error signing out: \(error.localizedDescription)")
         }
     }
+    
 }
