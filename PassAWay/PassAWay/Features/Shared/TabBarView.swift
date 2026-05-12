@@ -34,7 +34,7 @@ struct TabBarView: View {
                             .clipShape(Circle())
                             .shadow(color: Color("PassPrimary").opacity(0.35), radius: 10, x: 0, y: 4)
                     }
-                    .offset(y: -12)
+                    .offset(x: -13, y: -12)
                     Spacer()
                 }
 
@@ -60,3 +60,13 @@ struct TabBarView: View {
         .ignoresSafeArea(edges: .bottom)
     }
 }
+#Preview("Tab Bar Preview") {
+    @Previewable @State var selectedIndex: Int = 0
+    TabBarView(selected: $selectedIndex) {
+        print("Add tapped")
+    }
+    .previewLayout(.sizeThatFits)
+    .padding()
+    .background(Color.gray.opacity(0.1))
+}
+
