@@ -40,6 +40,8 @@ struct OnboardLocationView: View {
     @State private var isSearching = false
     @State private var searchTask: Task<Void, Never>? = nil
     
+    @State private var navigateToHome = false
+    
     // MARK: - Body
     var body: some View {
         ZStack {
@@ -76,7 +78,7 @@ struct OnboardLocationView: View {
                         .onChange(of: selectedAddress) {
                             searchTask?.cancel()
                             searchTask = Task {
-                                try? await Task.sleep(nanoseconds: 400_000_000)
+                                try? await Task.sleep(nanoseconds: 500_000_000)
                                 guard !Task.isCancelled else { return }
                                 await searchLocation()
                             }
@@ -180,6 +182,10 @@ struct OnboardLocationView: View {
                         .frame(height: 50)
                         .background(Color("PassPrimary"))
                         .cornerRadius(10)
+                        .navigationDestination(isPresented: $navigateToHome) {
+                            HomeView()
+                                .navigationBarHidden(true)
+                        }
                     }
                     .disabled(isLoading)
                 }
@@ -272,6 +278,7 @@ struct OnboardLocationView: View {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     isLoading = false
+                    navigateToHome = true
                 }
             }
         }

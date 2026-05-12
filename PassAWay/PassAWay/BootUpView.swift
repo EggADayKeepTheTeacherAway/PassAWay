@@ -44,11 +44,12 @@ struct BootUpView: View {
                                 
                                 // Mouth
                                 Circle()
-                                    .trim(from: 0.25, to: 0.75) // Trim to a semicircle shape
+                                    .trim(from: 0.3, to: 0.7) // Trim to a semicircle shape
                                     .stroke(Color("PassPrimary"), style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round)) // Thick, rounded line
                                     .frame(width: 130) // Size of the arc
                                     .rotationEffect(.degrees(180)) // Rotate to make it a smile
-                                    .offset(y: 35) // Move smile down
+                                    .offset(x:10) // Move smile down
+                                    .rotationEffect(.degrees(90))
                             }
                         )
                     
