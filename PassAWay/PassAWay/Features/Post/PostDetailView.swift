@@ -49,29 +49,43 @@ struct PostDetailView: View {
                     // MARK: Content Card
                     VStack(alignment: .leading, spacing: 0) {
 
-                        // Title + avatar row
-                        HStack(alignment: .top) {
+                        // MARK: Title & Profile Pill
+                        VStack(alignment: .leading, spacing: 8) {
+                                                    
+                            // 1. Title
                             Text(item.title)
-                                .font(.system(size: 22, weight: .bold))
+                                .font(.system(size: 28, weight: .heavy))
                                 .foregroundColor(Color("PassPrimary"))
-                            Spacer()
-                            Circle()
-                                .fill(Color("PassPrimary"))
-                                .frame(width: 38, height: 38)
-                                .overlay(
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.white)
-                                )
+                                .fixedSize(horizontal: false, vertical: true)
+                                .lineSpacing(2)
+                                                    
+                            // 2. Profile Pill
+                            NavigationLink(destination: PublicProfileView(userId: item.giverId)) {
+                                HStack(spacing: 8) {
+                                    UserAvatarView(userId: item.giverId, size: 24)
+                                                            
+                                    Text("View Profile")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(Color("PassPrimary"))
+                                                        
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(Color("PassPrimary").opacity(0.6))
+                                }
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 10)
+                                .background(Color("PassLightGreen").opacity(0.4))
+                                .cornerRadius(20)
+                            }
                         }
                         .padding(.horizontal, 20)
-                        .padding(.top, 22)
+                        .padding(.top, 20)
                         .padding(.bottom, 16)
 
                         Divider()
                             .background(Color("PassPrimary").opacity(0.1))
                             .padding(.horizontal, 20)
-                            .padding(.bottom, 16)
+                            .padding(.bottom, 20)
 
                         // Description
                         Text(item.description)
