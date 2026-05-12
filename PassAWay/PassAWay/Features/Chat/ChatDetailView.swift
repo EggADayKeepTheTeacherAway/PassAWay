@@ -462,6 +462,13 @@ private final class ChatDetailViewModel: ObservableObject {
                     }
                     print("✅ Rejected all other request messages for item \(itemId)")
                 }
+            
+            let currentUserId = Auth.auth().currentUser?.uid ?? ""
+            
+            db.collection("users").document(currentUserId).updateData([
+                "itemsGivenAway": FieldValue.increment(Int64(1)),
+                "xp": FieldValue.increment(Int64(50))
+            ])
         }
     }
 
