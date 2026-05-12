@@ -147,25 +147,23 @@ private final class ChatListViewModel: ObservableObject {
 @MainActor
 class UserFetcher: ObservableObject {
     @Published var name = "Loading..."
+    @Published var profileImageUrl = ""
     
     func fetch(userId: String) async {
-        print("🔍 Fetching user: \(userId)")
-        guard !userId.isEmpty else {
-            print("❌ userId is empty")
-            return
-        }
+        guard !userId.isEmpty else { return }
         do {
             let doc = try await Firestore.firestore()
                 .collection("users")
                 .document(userId)
                 .getDocument()
-            print("📄 Doc exists: \(doc.exists), data: \(doc.data() ?? [:])")
+                
             let user = try doc.data(as: User.self)
-            print("✅ Got user: \(user.name)")
-            name = user.name
+            
+            self.name = user.name
+            self.profileImageUrl = user.profileImageUrl
         } catch {
-            print("❌ Failed: \(error)")
-            name = "Unknown"
+            print("❌ UserFetcher error: \(error)")
+            self.name = "Unknown"
         }
     }
 }

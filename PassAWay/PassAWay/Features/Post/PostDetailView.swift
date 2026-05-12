@@ -7,9 +7,7 @@
 
 import SwiftUI
 import FirebaseFirestore
-import FirebaseCore
 import FirebaseAuth
-
 
 struct PostDetailView: View {
     let item: Item
@@ -20,7 +18,6 @@ struct PostDetailView: View {
     @State private var createdChat: Chat? = nil
     @State private var navigateToChat = false
     
-    // TODO: replace with Auth.auth().currentUser?.uid
     let currentUserId = Auth.auth().currentUser?.uid ?? ""
 
     func sendRequest() {
@@ -53,6 +50,21 @@ struct PostDetailView: View {
                     print("❌ Failed to send message: \(error)")
                     return
                 }
+                
+                // MARK: - NEW: Send Notification matching your Schema!
+                if currentUserId != item.giverId {
+                    let notificationData: [String: Any] = [
+                        "receiverId": item.giverId,
+                        "senderId": currentUserId,
+                        "type": "request_received",
+                        "body": item.title,
+                        "isRead": false,
+                        "createdAt": Timestamp()
+                    ]
+                    
+                    // Saved to top-level notifications collection per your schema
+                    db.collection("notifications").addDocument(data: notificationData)
+                }
 
                 let chat = Chat(
                     id: chatRef.documentID,
@@ -83,9 +95,8 @@ struct PostDetailView: View {
                         GeometryReader { geo in
                             Color.clear
                                 .overlay(
-                                    AsyncImage(url: URL(string: item.photoUrl)) { image in image
-                                            .resizable()
-                                            .scaledToFill()
+                                    AsyncImage(url: URL(string: item.photoUrl)) { image in
+                                        image.resizable().scaledToFill()
                                     } placeholder: {
                                         ZStack {
                                             Color("PassLightGreen")
@@ -95,13 +106,13 @@ struct PostDetailView: View {
                                 )
                                 .frame(width: geo.size.width, height: 300)
                                 .clipped()
-                            }
-                            .frame(height: 300)
+                        }
+                        .frame(height: 300)
 
-                            BackButton()
-                                .padding(.top, 52)
-                                .padding(.leading, 20)
-                                .buttonStyle(.plain)
+                        BackButton()
+                            .padding(.top, 52)
+                            .padding(.leading, 20)
+                            .buttonStyle(.plain)
                     }
 
                     // MARK: Content Card
@@ -109,23 +120,23 @@ struct PostDetailView: View {
 
                         // MARK: Title & Profile Pill
                         VStack(alignment: .leading, spacing: 8) {
-                                                    
-                            // 1. Title
+                            
+                            // 1. Massive, premium title
                             Text(item.title)
                                 .font(.system(size: 28, weight: .heavy))
                                 .foregroundColor(Color("PassPrimary"))
                                 .fixedSize(horizontal: false, vertical: true)
                                 .lineSpacing(2)
-                                                    
-                            // 2. Profile Pill
+                            
+                            // 2. Sleeker, smaller profile pill (Sub-header style)
                             NavigationLink(destination: PublicProfileView(userId: item.giverId)) {
                                 HStack(spacing: 8) {
                                     UserAvatarView(userId: item.giverId, size: 24)
-                                                            
+                                    
                                     Text("View Profile")
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundColor(Color("PassPrimary"))
-                                                        
+                                    
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 10, weight: .bold))
                                         .foregroundColor(Color("PassPrimary").opacity(0.6))
@@ -168,23 +179,43 @@ struct PostDetailView: View {
             }
             .ignoresSafeArea(edges: .top)
 
-            // MARK: Request Button
+            // MARK: Bottom Action Area
             VStack(spacing: 0) {
                 Divider().background(Color("PassPrimary").opacity(0.08))
-                Button(action: {
-                    showRequestSheet = true
-                }) {
-                    Text("Request for this Item")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color("PassPrimary"))
-                        .cornerRadius(14)
+                
+                // Check if the current user is NOT the owner
+                if currentUserId != item.giverId {
+                    Button(action: {
+                        showRequestSheet = true
+                    }) {
+                        Text("Request for this Item")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color("PassPrimary"))
+                            .cornerRadius(14)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color("PassBackground"))
+                    
+                } else {
+                    Button(action: {
+                    }) {
+                        Text("This is your item")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(Color("PassPrimary").opacity(0.6))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color("PassPrimary").opacity(0.1))
+                            .cornerRadius(14)
+                    }
+                    .disabled(true) 
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color("PassBackground"))
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(Color("PassBackground"))
             }
         }
         .navigationBarHidden(true)
@@ -203,10 +234,9 @@ struct PostDetailView: View {
                 ChatDetailView(chat: chat)
             }
         }
-
     }
 }
-    
+
 // MARK: - Meta Row
 
 struct MetaRow: View {
@@ -237,19 +267,21 @@ struct MetaRow: View {
 
 struct PostDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        PostDetailView(item: Item(
-            giverId: "BC3vz9m9FffzWrMlf6SKGPRptO92",
-            photoUrl: "",
-            title: "White T-Shirt",
-            description: "Lorem ipsum is simply dummy text of the printing and typesetting industry.",
-            category: "Clothes",
-            condition: "Brand New",
-            pickUpArea: "Kasetsart",
-            latitude: 13.8475,
-            longitude: 100.5696,
-            status: "Available",
-            claimedBy: nil,
-            createdAt: .init()
-        ))
+        NavigationStack {
+            PostDetailView(item: Item(
+                giverId: "BC3vz9m9FffzWrMlf6SKGPRptO92",
+                photoUrl: "",
+                title: "White T-Shirt",
+                description: "Lorem ipsum is simply dummy text of the printing and typesetting industry.",
+                category: "Clothes",
+                condition: "Brand New",
+                pickUpArea: "Kasetsart",
+                latitude: 13.8475,
+                longitude: 100.5696,
+                status: "Available",
+                claimedBy: nil,
+                createdAt: .init()
+            ))
+        }
     }
 }

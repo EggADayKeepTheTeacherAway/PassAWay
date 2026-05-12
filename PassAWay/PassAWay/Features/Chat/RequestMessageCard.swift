@@ -17,97 +17,114 @@ struct RequestMessageCard: View {
     let onNo: () -> Void
 
     var isGiver: Bool {
-        let result = currentUserId != message.senderId
-        print("🔍 isGiver: \(result)")
-        print("   currentUserId: \(currentUserId)")
-        print("   message.senderId: \(message.senderId)")
-        print("   giverId: \(giverId)")
-        
-        print("Message: ", message)
-        print("ItemStatus: ", itemStatus)
-        return result
+        return currentUserId != message.senderId
     }
     
     @State private var itemStatus: String = ""
     @State private var itemPhoto: String = ""
+    @State private var fetchedItem: Item? = nil 
     
     @State private var requestStatus: String?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            
+            // Item Image
             AsyncImage(url: URL(string: itemPhoto)) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
-                Color("PassLightGreen")
+                Color.white.opacity(0.5)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 160)
             .clipped()
-            .cornerRadius(12)
             
-            Text(message.text)
-                    .font(.system(size: 13))
-                    .foregroundColor(Color("PassPrimary").opacity(0.75))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+            // Message & See More Link
+            VStack(alignment: .leading, spacing: 8) {
+                Text(message.text)
+                    .font(.system(size: 14))
+                    .foregroundColor(Color("PassPrimary").opacity(0.9))
+                    .lineSpacing(4)
+                
+                if let item = fetchedItem {
+                    NavigationLink(destination: PostDetailView(item: item)) {
+                        Text("See item details")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(Color("PassPrimary"))
+                            .underline()
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
 
+            // Action Buttons
             if isGiver && itemStatus == "Available" && requestStatus == nil {
-                HStack(spacing: 0) {
+                HStack(spacing: 12) {
+                                
+                    // NO Button (Thinner)
                     Button(action: {
                         onNo()
                         requestStatus = "Rejected"
                     }) {
                         Text("No")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(Color.white)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(Color("PassPrimary"))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.black)
+                            .padding(.vertical, 8)
+                            .background(Color.white)
+                            .cornerRadius(8)
                     }
+                                
+                    // GIVE Button
                     Button(action: {
                         onGive()
                         requestStatus = "Accepted"
                     }) {
                         Text("Give")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.black)
+                            .padding(.vertical, 8)
+                            .background(Color("PassPrimary"))
+                            .cornerRadius(8)
                     }
                 }
-                .cornerRadius(8)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color("PassPrimary").opacity(0.15)))
-            }
-            else if requestStatus == "Accepted" {
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
+                            
+            } else if requestStatus == "Accepted" {
                 HStack {
                     Text("Request approved")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.green)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.green.opacity(0.6))
                         .clipShape(Capsule())
                     Spacer(minLength: 0)
                 }
-                .padding(.top, 8)
-            }
-            else if requestStatus == "Rejected" {
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
+                            
+            } else if requestStatus == "Rejected" {
                 HStack {
                     Text("Request rejected")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.red)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.red.opacity(0.6))
                         .clipShape(Capsule())
                     Spacer(minLength: 0)
                 }
-                .padding(.top, 8)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
             }
         }
-        .background(Color("PassLightGreen").opacity(0.3))
-        .cornerRadius(12)
+        .background(Color("PassLightGreen"))
+        .cornerRadius(16)
         .frame(maxWidth: 260, alignment: .leading)
         .task {
             await fetchItem()
@@ -122,12 +139,14 @@ struct RequestMessageCard: View {
                 .document(itemId)
                 .getDocument()
             let item = try doc.data(as: Item.self)
-            print("Item", item)
-            itemPhoto = item.photoUrl
-            itemStatus = item.status
+            
+            // Save everything we need
+            self.fetchedItem = item
+            self.itemPhoto = item.photoUrl
+            self.itemStatus = item.status
             
         } catch {
-            print("❌ Failed to fetch item photo: \(error)")
+            print("❌ Failed to fetch item: \(error)")
         }
     }
 }

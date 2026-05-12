@@ -19,13 +19,37 @@ struct BootUpView: View {
                 VStack(spacing: 30) {
                     Spacer()
                     
-                    // Graphic Placeholder
+                    // Constructed Smiley Face Visual
                     Circle()
                         .fill(Color("PassLightGreen"))
                         .frame(width: 250, height: 250)
                         .overlay(
-                            Text("Image Placeholder")
-                                .foregroundColor(Color("PassPrimary"))
+                            ZStack {
+                                // Face Container
+                                Circle()
+                                    .fill(Color("PassLightGreen"))
+                                    .frame(width: 250, height: 250)
+                                
+                                // Eyes (FIXED: Removed the stray 0000)
+                                HStack(spacing: 60) {
+                                    Circle()
+                                        .fill(Color("PassPrimary"))
+                                        .frame(width: 20, height: 20)
+                                        
+                                    Circle()
+                                        .fill(Color("PassPrimary"))
+                                        .frame(width: 20, height: 20)
+                                }
+                                .offset(y: -40) // Move eyes up slightly
+                                
+                                // Mouth
+                                Circle()
+                                    .trim(from: 0.25, to: 0.75) // Trim to a semicircle shape
+                                    .stroke(Color("PassPrimary"), style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round)) // Thick, rounded line
+                                    .frame(width: 130) // Size of the arc
+                                    .rotationEffect(.degrees(180)) // Rotate to make it a smile
+                                    .offset(y: 35) // Move smile down
+                            }
                         )
                     
                     // Text Content

@@ -105,7 +105,9 @@ struct ProfileView: View {
                                             GeometryReader { geometry in
                                                 ZStack(alignment: .leading) {
                                                     Capsule().fill(Color.white).frame(height: 6)
-                                                    Capsule().fill(Color("PassPrimary")).frame(width: totalXP > 0 ? geometry.size.width * (currentXP / totalXP) : 0, height: 6)
+                                                    Capsule()
+                                                                                                            .fill(Color("PassPrimary"))
+                                                                                                                .frame(width: totalXP > 0 ? geometry.size.width * min(currentXP / totalXP, 1.0) : 0, height: 6)
                                                 }
                                             }.frame(height: 6)
                                             Text("\(Int(currentXP))/\(Int(totalXP))").font(.system(size: 10, weight: .semibold)).foregroundColor(Color("PassPrimary"))
